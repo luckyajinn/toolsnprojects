@@ -1,0 +1,2502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows 11 Device Deployment Checklist — McKenna Labs IT</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #1a1d27;
+    --border: #2a2d3e;
+    --input-bg: #10131c;
+    --accent: #2a78d6;
+    --success: #1baf7a;
+    --warning: #eda100;
+    --danger: #e34948;
+    --text: #e8e8e8;
+    --muted: #898781;
+    --radius: 8px;
+    --callout-note-text: #cfe2f7;
+    --callout-warn-text: #f5dca6;
+  }
+  :root[data-theme="light"] {
+    --bg: #f2f3f6;
+    --panel: #ffffff;
+    --border: #d8dae1;
+    --input-bg: #eef0f4;
+    --accent: #2a78d6;
+    --success: #128a5e;
+    --warning: #a56a00;
+    --danger: #c9302c;
+    --text: #1b1d24;
+    --muted: #6b6e78;
+    --callout-note-text: #1b3a5c;
+    --callout-warn-text: #6b4c02;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  #app { max-width: 1100px; margin: 0 auto; padding: 16px 16px 90px; }
+  a { color: var(--accent); }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    font-size: 14px;
+    transition: border-color .15s, background .15s;
+  }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #3684e6; }
+  button.success { background: var(--success); border-color: var(--success); color: #06281c; }
+  button.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+  button.danger:hover { background: var(--danger); color: #fff; }
+  button.ghost { background: transparent; }
+  button.small { padding: 4px 9px; font-size: 12px; }
+  input[type="text"], input[type="number"], input[type="date"], textarea, select {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    font-family: inherit;
+    font-size: 14px;
+    width: 100%;
+  }
+  textarea { resize: vertical; min-height: 44px; }
+  input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+  input[data-transform="upper"] { text-transform: uppercase; }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 160px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .03em;
+    padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
+  }
+  .badge-skip { background: rgba(137,135,129,.2); color: var(--muted); border: 1px solid var(--muted); }
+  .badge-complete { background: rgba(27,175,122,.18); color: var(--success); border: 1px solid var(--success); }
+  .badge-warning { background: rgba(237,161,0,.18); color: var(--warning); border: 1px solid var(--warning); }
+  .badge-editing { background: rgba(227,73,72,.18); color: var(--danger); border: 1px solid var(--danger); animation: pulse 2s infinite; }
+  .badge-censor { background: rgba(227,73,72,.18); color: var(--danger); border: 1px solid var(--danger); }
+  .censored-input { color: var(--muted) !important; letter-spacing: .05em; cursor: not-allowed; }
+  .options-hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+
+  /* Device category select */
+  #category-select { padding: 70px 0 40px; text-align: center; }
+  #category-select h1 { font-size: 24px; margin: 0 0 8px; }
+  .category-select-sub { color: var(--muted); font-size: 14px; margin: 0 auto 28px; max-width: 480px; }
+  .category-grid { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .category-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; width: 240px; text-align: left; cursor: pointer; transition: border-color .15s, transform .15s;
+  }
+  .category-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .category-card-stub { opacity: .65; }
+  .category-card-stub:hover { border-color: var(--warning); }
+  .category-card-label { font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .category-card-desc { color: var(--muted); font-size: 12.5px; }
+
+  /* Top bar */
+  #topbar {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 16px;
+  }
+  #topbar .brand { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  #topbar .brand h1 { font-size: 19px; margin: 0; }
+  #topbar .brand .sop { color: var(--muted); font-size: 12.5px; }
+  #topbar .session-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .session-modifiers-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
+  .session-modifiers-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .modifier-chip {
+    padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--border);
+    background: var(--input-bg); color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: border-color .15s, background .15s, color .15s;
+  }
+  .modifier-chip:hover { border-color: var(--accent); color: var(--text); }
+  .modifier-chip.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+  #topbar .device-types { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .device-type-btn {
+    flex: 1; min-width: 220px; text-align: left; padding: 12px 14px;
+    background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer;
+  }
+  .device-type-btn.active { border-color: var(--accent); background: rgba(42,120,214,.12); }
+  .device-type-btn .label { font-weight: 600; margin-bottom: 3px; }
+  .device-type-btn .desc { color: var(--muted); font-size: 12.5px; }
+  #topbar .progress-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .progress-stat { font-size: 13px; color: var(--muted); }
+  .progress-stat b { color: var(--text); }
+  .progress-bar-track { flex: 1; min-width: 120px; height: 8px; background: var(--input-bg); border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+  .progress-bar-fill { height: 100%; background: var(--accent); transition: width .2s; }
+  #topbar .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Prerequisites */
+  .prereq-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
+  .prereq-card h2 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: center; gap: 10px; }
+  .prereq-card h2 > span:first-child { flex: 1; }
+  .prereq-card h2[data-toggle-prereqs] { cursor: pointer; user-select: none; }
+  .prereq-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--border); }
+  .prereq-row:first-of-type { border-top: none; }
+  .prereq-row.skipped { opacity: .55; }
+  .prereq-row input[type=checkbox] { margin-top: 3px; }
+  .prereq-row .item { font-weight: 600; min-width: 110px; }
+  .prereq-row .detail { color: var(--muted); font-size: 13px; }
+
+  /* Phase cards */
+  .phase-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+  .phase-card.skipped { opacity: .55; }
+  .phase-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; user-select: none; }
+  .phase-num {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0;
+  }
+  .phase-header h3 { margin: 0; font-size: 15.5px; flex: 1; }
+  .phase-chevron { color: var(--muted); transition: transform .15s; }
+  .phase-chevron.collapsed { transform: rotate(-90deg); }
+  .phase-body { padding: 0 16px 16px; }
+  .skip-note { color: var(--muted); font-size: 13px; padding: 0 16px 14px; }
+  .prereq-card.skipped { opacity: .55; }
+  .prereq-card .skip-note { padding: 0; margin-bottom: 10px; }
+  .section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
+  .section-label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0 6px; }
+  .section-label-row.skipped .section-label { color: var(--muted); opacity: .7; }
+  .section-skip-btn { color: var(--muted); border-color: transparent; text-transform: none; letter-spacing: normal; font-weight: 400; }
+  .section-skip-btn:hover { color: var(--danger); border-color: var(--danger); }
+  .step-row { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); align-items: flex-start; }
+  .step-row:first-of-type { border-top: none; }
+  .step-row input[type=checkbox] { width: 19px; height: 19px; margin-top: 2px; flex-shrink: 0; accent-color: var(--accent); }
+  .step-row .step-text.checked { color: var(--muted); text-decoration: line-through; }
+  .step-row.section-skipped { opacity: .55; }
+  .callout { border-radius: var(--radius); padding: 8px 12px; font-size: 13px; margin-top: 6px; }
+  .callout-note { background: rgba(42,120,214,.12); border: 1px solid var(--accent); color: var(--callout-note-text); }
+  .callout-warning { background: rgba(237,161,0,.12); border: 1px solid var(--warning); color: var(--callout-warn-text); }
+  .callout-warning::before { content: "⚠ "; }
+
+  /* Handoff divider — marks the point where remaining phases require the device build to be done and the end user present */
+  .handoff-divider { margin: 26px 0 14px; padding-top: 16px; border-top: 2px solid var(--accent); }
+  .handoff-divider-label { display: block; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+  .handoff-divider-sub { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Final checklist */
+  .final-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  .final-card h2 { font-size: 16px; margin: 0 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .final-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--border); }
+  .final-row:first-of-type { border-top: none; }
+  .final-row input[type=checkbox] { width: 19px; height: 19px; margin-top: 1px; accent-color: var(--success); }
+  .final-row.skipped { opacity: .55; }
+  .banner-complete {
+    margin-top: 14px; background: rgba(27,175,122,.15); border: 1px solid var(--success);
+    color: var(--success); text-align: center; font-weight: 700; letter-spacing: .04em;
+    padding: 14px; border-radius: var(--radius); font-size: 15px;
+  }
+
+  /* Footer */
+  #session-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; background: var(--panel); border-top: 1px solid var(--border);
+    padding: 10px 16px; font-size: 12.5px; color: var(--muted); display: flex; gap: 18px; flex-wrap: wrap; justify-content: center;
+    z-index: 10;
+  }
+  #session-footer b { color: var(--text); }
+
+  /* Edit mode */
+  #edit-view .edit-section { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  #edit-view .edit-section > h2 { font-size: 15px; margin: 0 0 12px; }
+  .edit-item-row {
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; background: var(--input-bg);
+  }
+  .edit-item-row .row-top { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .drag-handle { cursor: grab; color: var(--muted); font-size: 16px; padding: 0 4px; }
+  .drag-handle:active { cursor: grabbing; }
+  .step-edit-block { border-left: 2px solid var(--border); padding-left: 12px; margin: 8px 0 8px 13px; }
+  .checkbox-inline { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text); margin-right: 12px; }
+  .checkbox-inline input { width: auto; }
+  .field-inline { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .field-inline label { margin: 0; white-space: nowrap; }
+  .note-notice {
+    background: rgba(237,161,0,.1); border: 1px solid var(--warning); color: var(--callout-warn-text); border-radius: var(--radius);
+    padding: 10px 12px; font-size: 12.5px; margin-bottom: 14px;
+  }
+
+  /* Options menu */
+  #options-wrap { position: fixed; top: 16px; right: 16px; z-index: 30; }
+  #options-panel {
+    position: absolute; top: 42px; right: 0; background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px; min-width: 210px; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  .options-group { margin-bottom: 10px; }
+  .options-group:last-child { margin-bottom: 0; }
+  .options-group > label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+  .theme-toggle-row { display: flex; gap: 6px; }
+  .theme-toggle-row button { flex: 1; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow-y: auto; z-index: 100;
+  }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+    max-width: 780px; width: 100%;
+  }
+  .modal-box h2 { margin-top: 0; font-size: 17px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+  table.hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.hist-table th, table.hist-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  table.hist-table th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; }
+
+  .empty-msg { color: var(--muted); font-size: 13px; padding: 10px 0; }
+
+  /* Print view */
+  #print-view { display: none; }
+  @media print {
+    #app, #session-footer { display: none !important; }
+    #print-view { display: block !important; padding: 0; color: #000; background: #fff; }
+    #print-view * { color: #000 !important; }
+    #print-view .p-header { border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+    #print-view .p-header h1 { margin: 0 0 4px; font-size: 18px; }
+    #print-view .p-meta { font-size: 12px; }
+    #print-view .p-phase { margin-bottom: 14px; page-break-inside: avoid; }
+    #print-view .p-handoff-divider { margin: 18px 0 12px; padding-top: 10px; border-top: 2px solid #000; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; page-break-inside: avoid; }
+    #print-view .p-handoff-sub { display: block; font-size: 10.5px; font-weight: 400; text-transform: none; letter-spacing: normal; color: #444 !important; margin-top: 2px; }
+    #print-view .p-phase h3 { font-size: 14px; margin: 0 0 4px; border-bottom: 1px solid #999; padding-bottom: 3px; }
+    #print-view .p-step { font-size: 12.5px; margin: 3px 0; }
+    #print-view .p-note { font-size: 11.5px; margin: 2px 0 2px 18px; border-left: 2px solid #666; padding-left: 6px; }
+    #print-view .p-skip { font-style: italic; color: #444 !important; }
+    #print-view .p-signatures { margin-top: 20px; page-break-inside: avoid; }
+    #print-view .p-sig-attest { font-size: 11.5px; font-style: italic; margin-bottom: 22px; }
+    #print-view .p-sig-row { display: flex; gap: 40px; }
+    #print-view .p-sig-block { flex: 1; }
+    #print-view .p-sig-line { border-bottom: 1px solid #000; height: 28px; }
+    #print-view .p-sig-line-date { margin-top: 14px; height: 20px; }
+    #print-view .p-sig-label { font-size: 10.5px; margin-top: 2px; }
+    #print-view .p-notes { margin-top: 20px; page-break-inside: avoid; }
+    #print-view .p-notes-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #999; padding-bottom: 3px; margin-bottom: 6px; }
+    #print-view .p-notes-body { font-size: 12.5px; white-space: pre-wrap; }
+    #print-view .p-footer { margin-top: 16px; border-top: 1px solid #000; padding-top: 6px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="print-view"></div>
+<div id="modal-root"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var UI_KEY = "mli-deployment-ui-state";
+  var ACTIVE_CATEGORY_KEY = "mli-active-device-category";
+
+  // ---------------------------------------------------------------------
+  // Device categories — which kind of device is being worked on.
+  // "laptop" and "scanner-gun" have built-out checklists; the rest are
+  // placeholders until we build their content out. Functional categories
+  // also need an entry in CATEGORY_STORAGE below.
+  // ---------------------------------------------------------------------
+  var DEVICE_CATEGORIES = [
+    { id: "laptop", label: "Standard Laptop / Desktop", description: "Windows 11 laptop or desktop deployment — the SOP-DEP-001 checklist.", functional: true },
+    { id: "scanner-gun", label: "Scanner Gun", description: "Honeywell RF gun factory reset & Deacom WMS redeployment (SOP-WMS-001).", functional: true },
+    { id: "ipad", label: "iPad / iOS Device", description: "iPad and iOS device provisioning for Intune enrollment (SOP-DEP-002).", functional: true }
+  ];
+
+  // Per-category storage keys and default-config providers, for the
+  // functional categories.
+  var CATEGORY_STORAGE = {
+    laptop: {
+      configKey: "mli-deployment-checklist-config",
+      sessionKey: "mli-deployment-current-session",
+      historyKey: "mli-deployment-sessions",
+      getDefaultConfig: getDefaultConfig
+    },
+    "scanner-gun": {
+      configKey: "mli-scanner-gun-checklist-config",
+      sessionKey: "mli-scanner-gun-current-session",
+      historyKey: "mli-scanner-gun-sessions",
+      getDefaultConfig: getScannerGunDefaultConfig
+    },
+    ipad: {
+      configKey: "mli-ipad-checklist-config",
+      sessionKey: "mli-ipad-current-session",
+      historyKey: "mli-ipad-sessions",
+      getDefaultConfig: getIpadDefaultConfig
+    }
+  };
+
+  // ---------------------------------------------------------------------
+  // Default configuration — full SOP-DEP-001 content
+  // ---------------------------------------------------------------------
+  function getDefaultConfig() {
+    return {
+      meta: {
+        title: "Windows 11 Device Deployment Checklist",
+        subtitle: "McKenna Labs IT",
+        sop: "SOP-DEP-001",
+        revised: "June 30, 2026"
+      },
+      deviceTypes: [
+        { id: "retail", label: "Fresh from Retail", description: "Brand new device with Windows 11 Pro pre-installed and Autopilot running. Windows 11 is still reinstalled — complete all phases." },
+        { id: "refresh", label: "Refresh / Redeployed Device", description: "Device being wiped and redeployed to a new or existing user. Complete all phases." }
+      ],
+      prerequisites: [
+        { id: "pre1", item: "Credentials", detail: "User's M365 credentials + IT admin credentials. Use TAP where applicable.", skipForDeviceTypes: [] },
+        { id: "pre2", item: "Media", detail: "Prepared Windows 11 Pro USB installer", skipForDeviceTypes: [] },
+        { id: "pre3", item: "Network", detail: "Wi-Fi: Hubble | Password: [See IT credentials doc] OR wired Ethernet", skipForDeviceTypes: [] },
+        { id: "pre4", item: "Hardware", detail: "Device, docking station where applicable, monitors, peripherals", skipForDeviceTypes: [] },
+        { id: "pre5", item: "References", detail: "Asset tag, serial number, assigned user, and primary work location confirmed", skipForDeviceTypes: [] }
+      ],
+      phases: [
+        {
+          id: "phase1", number: 1, title: "Windows 11 Installation",
+          skipForDeviceTypes: [],
+          skipNote: "",
+          steps: [
+            { id: "s1-1", text: "Insert the Windows 11 Pro USB installer.", note: null, warning: null },
+            { id: "s1-2", text: "Power on the device and enter the boot menu.", note: "Common keys: F12 (Dell), F2 or F12 (Lenovo). Check model if unsure.", warning: null },
+            { id: "s1-3", text: "Select the USB installer as the boot device.", note: null, warning: null },
+            { id: "s1-4", text: "Choose language, time/currency format, and keyboard layout, then click Next.", note: null, warning: null },
+            { id: "s1-5", text: "Click \"Install Now.\"", note: null, warning: null },
+            { id: "s1-6", text: "Select \"I don't have a product key\" (for volume licensing / Autopilot activation) and choose the Windows 11 Pro edition.", note: null, warning: null },
+            { id: "s1-7", text: "Select \"Custom: Install Windows only,\" choose the target drive, and delete existing partitions.", note: null, warning: null }
+          ]
+        },
+        {
+          id: "phase2", number: 2, title: "Network & Account Sign-In",
+          skipForDeviceTypes: [], skipNote: "",
+          steps: [
+            { id: "s2-1", text: "Connect to Wi-Fi (\"Hubble\") or connect an Ethernet cable.", note: "Wi-Fi password: [See IT credentials doc]. Do not store passwords in step text.", warning: null },
+            { id: "s2-2", text: "Wait for Windows to check for updates during OOBE.", note: null, warning: null },
+            { id: "s2-3", text: "Sign in with the end user's M365 credentials when prompted, or IT admin credentials if staging before handoff.", note: "Use a Temporary Access Pass (TAP) where applicable instead of a static password.", warning: null },
+            { id: "s2-4", text: "Complete Autopilot enrollment prompts (device naming, Enrollment Status Page) if applicable.", note: null, warning: null, optional: true }
+          ]
+        },
+        {
+          id: "phase3", number: 3, title: "Software Installation",
+          skipForDeviceTypes: [], skipNote: "",
+          steps: [
+            { id: "s3-1", text: "Install Company Portal and any required line-of-business apps via Intune or manual installer.", note: null, warning: null },
+            { id: "s3-2", text: "Install Microsoft 365 Apps (Word, Excel, PowerPoint, Outlook, Teams).", note: "This can take 15-20 minutes depending on network speed — continue with other steps while it installs.", warning: null },
+            { id: "s3-adobe-1", section: "Adobe", text: "Download and install Adobe (Acrobat) via Company Portal.", note: null, warning: null },
+            { id: "s3-adobe-2", section: "Adobe", text: "Open Adobe and sign in with the user's Adobe account when prompted.", note: null, warning: null },
+            { id: "s3-adobe-3", section: "Adobe", text: "Check for and install the latest Adobe update.", note: "Help > Check for Updates (or the Creative Cloud app, if applicable) — confirm it reports up to date before continuing.", warning: null },
+            { id: "s3-3", text: "Install department-specific software per the user's role profile.", note: null, warning: null },
+            { id: "s3-4", text: "Install printer drivers if not deployed automatically via GPO/Intune.", note: null, warning: null },
+            { id: "s3-5", text: "Install any required browser extensions or plugins.", note: "Confirm the software list against the user's role in the onboarding ticket before installing extras.", warning: null }
+          ]
+        },
+        {
+          id: "phase4", number: 4, title: "Windows Updates",
+          skipForDeviceTypes: [], skipNote: "",
+          steps: [
+            { id: "s4-1", text: "Open Settings > Windows Update and check for updates.", note: null, warning: null },
+            { id: "s4-2", text: "Install all available updates, including optional driver updates.", note: null, warning: null },
+            { id: "s4-3", text: "Restart and re-check for updates until the device reports \"You're up to date.\"", note: "Some devices require 2-3 update/restart cycles before fully current.", warning: null }
+          ]
+        },
+        {
+          id: "phase5", number: 5, title: "MDM Enrollment & Endpoint Protection",
+          skipForDeviceTypes: [], skipNote: "",
+          steps: [
+            { id: "s5-1", text: "Confirm the device is enrolled in Intune (Settings > Accounts > Access work or school).", note: null, warning: null },
+            { id: "s5-2", text: "Verify compliance policies have applied (check Company Portal compliance status).", note: null, warning: null },
+            { id: "s5-3", text: "Install and register the Xcitium ECM agent.", note: null, warning: "Xcitium ECM enrollment takes priority over all other endpoint agents — do not proceed to Phase 6 until Xcitium shows an active, connected status in the console." },
+            { id: "s5-4", text: "Confirm BitLocker is enabled and the recovery key is escrowed to Entra ID / Intune.", note: null, warning: null }
+          ]
+        },
+        {
+          id: "phase6", number: 6, title: "Application Configuration",
+          skipForDeviceTypes: [], skipNote: "",
+          steps: [
+            { id: "s6-1", section: "OneDrive", text: "Sign into OneDrive with the user's M365 account.", note: null, warning: null },
+            { id: "s6-2", section: "OneDrive", text: "Configure Known Folder Move (Desktop, Documents, Pictures).", note: "Confirm sync completes before considering the device ready for handoff.", warning: null },
+            { id: "s6-3", section: "OneDrive", text: "Verify OneDrive sync status shows a green checkmark.", note: null, warning: null },
+            { id: "s6-4", section: "Teams", text: "Sign into Microsoft Teams.", note: null, warning: null, skipForExistingUser: true },
+            { id: "s6-5", section: "Teams", text: "Verify audio/video devices are detected in Teams settings.", note: null, warning: null, skipForExistingUser: true },
+            { id: "s6-6", section: "Teams", text: "Set Teams to start automatically on login.", note: null, warning: null, skipForExistingUser: true },
+            { id: "s6-7", section: "Outlook", text: "Launch Outlook and confirm the mailbox syncs.", note: null, warning: null, skipForExistingUser: true },
+            { id: "s6-8", section: "Outlook", text: "Configure the signature per the company template.", note: "Use the standard signature template from the IT shared drive — do not freehand a new one.", warning: null, skipForExistingUser: true },
+            { id: "s6-9", section: "Outlook", text: "Confirm calendar and shared mailboxes (if applicable) are visible.", note: null, warning: null, optional: true, skipForExistingUser: true },
+            { id: "s6-10", section: "Browser", text: "Set the default browser per company standard.", note: null, warning: null, skipForExistingUser: true },
+            { id: "s6-11", section: "Browser", text: "Sign into the browser profile / sync bookmarks if applicable.", note: null, warning: null, optional: true, skipForExistingUser: true },
+            { id: "s6-12", section: "Browser", text: "Install required browser extensions (password manager, security tools).", note: "Confirm the extension list against the IT-approved list before installing.", warning: null, skipForExistingUser: true }
+          ]
+        },
+        {
+          id: "phase7", number: 7, title: "Network Printers",
+          skipForDeviceTypes: [], skipNote: "",
+          steps: [
+            { id: "s7-1", text: "Identify the correct printer for the user's primary work location.", note: "Reference the printer list for the site — do not guess based on prior deployments.", warning: null },
+            { id: "s7-2", text: "Connect to the print server or add the printer via IP/queue name.", note: null, warning: null },
+            { id: "s7-3", text: "Install printer drivers if not automatically deployed.", note: null, warning: null },
+            { id: "s7-4", text: "Print a test page to confirm connectivity.", note: null, warning: null },
+            { id: "s7-5", text: "Set the default printer per user preference or department standard.", note: "Confirm with the user which printer they use most often before finalizing.", warning: null }
+          ]
+        },
+        {
+          id: "phase8", number: 8, title: "Hardware & Workspace Setup",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: true, skipForLaptopOnly: true,
+          steps: [
+            { id: "s8-1", text: "Connect the docking station (if applicable).", note: null, warning: null, optional: true },
+            { id: "s8-2", text: "Connect and arrange external monitor(s).", note: null, warning: null },
+            { id: "s8-3", text: "Set monitor display arrangement and scaling in Windows Settings.", note: null, warning: null },
+            { id: "s8-4", text: "Connect keyboard and mouse.", note: null, warning: null },
+            { id: "s8-5", text: "Connect webcam/headset if provided.", note: null, warning: null, optional: true },
+            { id: "s8-6", text: "Label the device with an asset tag if not already labeled.", note: null, warning: null },
+            { id: "s8-7", text: "Position the device at the user's workstation.", note: null, warning: null },
+            { id: "s8-8", text: "Confirm all cables are routed and secured.", note: null, warning: null }
+          ]
+        },
+        {
+          id: "phase9", number: 9, title: "Multi-Factor Authentication Setup",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: true, skipForExistingUser: true,
+          steps: [
+            { id: "s9-1", text: "Have the user open the Microsoft Authenticator app (or preferred MFA method) on their personal device.", note: "The user must be physically present for this phase — MFA registration cannot be completed on their behalf.", warning: null },
+            { id: "s9-2", text: "Guide the user through registering their MFA method in Entra ID.", note: null, warning: null },
+            { id: "s9-3", text: "Confirm at least one backup MFA method is registered (phone call or alternate authenticator).", note: null, warning: null },
+            { id: "s9-4", text: "Have the user complete a test sign-in using MFA to confirm it works.", note: null, warning: null }
+          ]
+        }
+      ],
+      finalChecklist: [
+        { id: "fc1", text: "Windows 11 Pro installed and activated" },
+        { id: "fc2", text: "Device joined to Entra ID / Autopilot enrolled" },
+        { id: "fc3", text: "All Windows Updates installed" },
+        { id: "fc4", text: "Xcitium ECM active and connected" },
+        { id: "fc5", text: "BitLocker enabled with recovery key escrowed" },
+        { id: "fc6", text: "Microsoft 365 Apps installed and signed in" },
+        { id: "fc7", text: "OneDrive syncing (Known Folder Move confirmed)" },
+        { id: "fc8", text: "Teams configured and audio/video verified", skipForExistingUser: true },
+        { id: "fc9", text: "Outlook mailbox syncing with signature set", skipForExistingUser: true },
+        { id: "fc10", text: "Default browser and extensions configured", skipForExistingUser: true },
+        { id: "fc11", text: "Network printer connected and test page printed" },
+        { id: "fc12", text: "All peripherals connected and functioning", skipForLaptopOnly: true },
+        { id: "fc13", text: "MFA registered and test sign-in successful", requiresUserInteraction: true, skipForExistingUser: true },
+        { id: "fc14", text: "Asset tag, serial number, and user assignment recorded in the asset system" }
+      ]
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Default configuration — Scanner Gun (RF Gun / WMS device), from
+  // SOP-WMS-001 "RF Gun / WMS Device Refresh & Redeployment"
+  // ---------------------------------------------------------------------
+  function getScannerGunDefaultConfig() {
+    return {
+      meta: {
+        title: "RF Gun / WMS Device Refresh & Redeployment",
+        subtitle: "McKenna Labs IT",
+        sop: "SOP-WMS-001",
+        revised: "April 15, 2026"
+      },
+      deviceTypes: [],
+      prerequisites: [
+        { id: "gpre1", item: "Hardware", detail: "Honeywell RF Gun (any supported model)", skipForDeviceTypes: [] },
+        { id: "gpre2", item: "Network", detail: "Wi-Fi SSID: Hubble | Password: [See IT credentials doc]", skipForDeviceTypes: [] },
+        { id: "gpre3", item: "APK", detail: "Latest Deacom WMS APK from FTP: McKennaLabs > Installation Files > 173.009", skipForDeviceTypes: [] },
+        { id: "gpre4", item: "PC", detail: "Windows PC with USB cable, File Explorer access to device storage", skipForDeviceTypes: [] },
+        { id: "gpre5", item: "WMS URL", detail: "https://mckennalabs.deacomcloud.com:2091", skipForDeviceTypes: [] },
+        { id: "gpre6", item: "Device PIN", detail: "[See IT credentials doc] (startup PIN set during setup)", skipForDeviceTypes: [] }
+      ],
+      phases: [
+        {
+          id: "gphase1", number: 1, title: "Factory Reset",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "g1-1", text: "Power on the RF gun.", note: null, warning: null },
+            { id: "g1-2", text: "Hold the Power button and press Restart.", note: "The device will begin rebooting.", warning: null },
+            { id: "g1-3", text: "As soon as the Honeywell logo appears on screen, simultaneously hold Power + the green/blue context button.", note: null, warning: "Timing matters here. Too late and it will boot normally — just restart and try again." },
+            { id: "g1-4", text: "A text-based recovery menu will appear. Use the orange or green context button to cycle through the options.", note: null, warning: null },
+            { id: "g1-5", text: "Navigate to Full Factory Reset, then press the Power button to confirm.", note: "The reset will take 5-15 minutes depending on the device.", warning: null }
+          ]
+        },
+        {
+          id: "gphase2", number: 2, title: "Initial OS Setup",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "g2-1", text: "Select Manual setup when prompted.", note: null, warning: null },
+            { id: "g2-2", text: "Connect to Wi-Fi.", note: "On Android 8.1, scan the QR code if available. On Android 10/11, manually enter the SSID and password — see IT credentials doc.", warning: null },
+            { id: "g2-3", text: "Choose \"Start from new\" (not restore from backup).", note: null, warning: null },
+            { id: "g2-4", text: "Skip Google account sign-in.", note: null, warning: null },
+            { id: "g2-5", text: "Skip any additional account setup screens.", note: null, warning: null },
+            { id: "g2-6", text: "When prompted to name the device, assign it according to the naming convention: MLI-WS-XX.", note: "Replace XX with the next available number for that department (e.g., MLI-WS-01, MLI-WS-02). Department prefix is WS for Warehouse.", warning: null },
+            { id: "g2-7", text: "Set the device PIN when prompted.", note: "See IT credentials doc for the standard startup PIN.", warning: null },
+            { id: "g2-8", text: "Decline any optional extras or app suggestions (select No Thanks).", note: null, warning: null }
+          ]
+        },
+        {
+          id: "gphase3", number: 3, title: "APK Transfer via USB",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "g3-1", text: "Retrieve the latest Deacom WMS APK from the FTP server (McKennaLabs > Installation Files > 173.009) and save it locally on the PC you'll be using.", note: null, warning: null },
+            { id: "g3-2", text: "At the home screen, connect the RF gun to the PC using a USB cable.", note: null, warning: null },
+            { id: "g3-3", text: "On the device, open Settings and search for USB. Change the USB mode to Transfer Files (MTP).", note: null, warning: null },
+            { id: "g3-4", text: "On the PC, open File Explorer — the device will appear as a removable drive. Navigate into the device storage.", note: null, warning: null },
+            { id: "g3-5", text: "Copy the Deacom WMS APK file into the Downloads folder on the device.", note: null, warning: null }
+          ]
+        },
+        {
+          id: "gphase4", number: 4, title: "APK Installation",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "g4-1", text: "On the device, open the Files app.", note: null, warning: null },
+            { id: "g4-2", text: "Navigate to the Downloads folder and tap the APK file.", note: "If prompted to allow installation from unknown sources, accept and continue.", warning: null },
+            { id: "g4-3", text: "Follow the on-screen prompts to complete the installation.", note: null, warning: null },
+            { id: "g4-4", text: "Once installed, launch the Deacom WMS application.", note: null, warning: null }
+          ]
+        },
+        {
+          id: "gphase5", number: 5, title: "Deacom WMS Configuration",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "g5-1", text: "In the Server field of the Deacom WMS login screen, enter the Cloud URL and WMS port: https://mckennalabs.deacomcloud.com:2091", note: null, warning: null },
+            { id: "g5-2", text: "Confirm the connection is successful and the login screen loads.", note: null, warning: "Do not use an IP address or the automation service port. Port 2091 is the WMS-specific port assigned by ECI for McKenna Labs — separate from other Deacom services. If the connection fails, confirm with ECI that the port is open on their cloud infrastructure before troubleshooting the device." },
+            { id: "g5-3", text: "The device is now configured and ready for warehouse use.", note: null, warning: null }
+          ]
+        }
+      ],
+      finalChecklist: [
+        { id: "gfc1", text: "Full factory reset completed" },
+        { id: "gfc2", text: "Device connected to Wi-Fi (Hubble)" },
+        { id: "gfc3", text: "Device named per MLI-WS-XX convention" },
+        { id: "gfc4", text: "Startup PIN set" },
+        { id: "gfc5", text: "Deacom WMS APK installed" },
+        { id: "gfc6", text: "Deacom WMS connects successfully (https://mckennalabs.deacomcloud.com:2091)" },
+        { id: "gfc7", text: "Device ready for warehouse use" }
+      ]
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Utilities
+  // ---------------------------------------------------------------------
+  // ---------------------------------------------------------------------
+  // Censor mode — masks identifying data so the tool can be screenshotted
+  // or demoed. Display only: nothing below touches the stored session, the
+  // saved config, or any export. Automatically paused in Edit Mode so you
+  // never edit a masked value back over real content.
+  // ---------------------------------------------------------------------
+  var CENSOR_BLOCK = "████████";
+  var CENSOR_BLOCK_LONG = "██████████████████ ███████████ ████████████████\n████████████ ██████████████████████";
+
+  // Fixed content scrubbed out of headings, prerequisites, step text, notes
+  // and warnings. Add a line here for anything else that should not leave
+  // the building.
+  // Order matters: whole-token patterns (addresses, IPs, hostnames) run
+  // first so a company-name match cannot chew a piece out of them.
+  var CENSOR_PATTERNS = [
+    { re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, to: "[email]" },
+    { re: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, to: "[IP]" },
+    { re: /\bMcKenna\s+Labs\b/gi, to: "[Company]" },
+    { re: /\bMcKenna\b/gi, to: "[Company]" },
+    { re: /\bMCKL\b/gi, to: "[ORG]" },
+    { re: /\bHubble\b/gi, to: "[SSID]" }
+  ];
+
+  function censorOn() {
+    return !!(uiState && uiState.censor) && mode !== "edit";
+  }
+
+  // Masks a value the technician typed: names, serials, asset tags, notes.
+  // Empty values stay empty so blank fields still read as blank.
+  function cen(value, block) {
+    var v = value === null || value === undefined ? "" : String(value);
+    if (!censorOn() || !v.trim()) return v;
+    return block || CENSOR_BLOCK;
+  }
+
+  // Scrubs known identifiers out of fixed content.
+  function scrub(str) {
+    var s = String(str === null || str === undefined ? "" : str);
+    if (!censorOn()) return s;
+    CENSOR_PATTERNS.forEach(function (p) { s = s.replace(p.re, p.to); });
+    return s;
+  }
+
+  function esc(str) {
+    return scrub(str).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function uid(prefix) {
+    return prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+  function capitalizeWords(str) {
+    return str.replace(/(^|\s)([a-z])/g, function (m, sep, ch) { return sep + ch.toUpperCase(); });
+  }
+  function applyFieldTransform(el, transform) {
+    var start = el.selectionStart, end = el.selectionEnd;
+    var val = el.value;
+    var out = transform === "upper" ? val.toUpperCase() : transform === "title" ? capitalizeWords(val) : val;
+    if (out !== val) {
+      el.value = out;
+      if (start !== null && end !== null) el.setSelectionRange(start, end);
+    }
+  }
+  function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  // -------------------------------------------------------------------
+  // Export file naming - first initial + last name + serial
+  // e.g. Christian Jones / ABC123456  ->  CJonesABC123456
+  // Mirrors the same helpers in deployment-tracker.html so a device's
+  // import JSON and its printed sheet land on the same filename.
+  // -------------------------------------------------------------------
+  var NAME_SUFFIXES = /^(jr|sr|ii|iii|iv|v)\.?$/i;
+
+  // "" when the value isn't a usable person name (blank, or one word).
+  function nameKey(full) {
+    var s = String(full || "").replace(/\s+/g, " ").trim();
+    if (!s) return "";
+    var comma = s.indexOf(",");                  // "Jones, Christian"
+    if (comma > -1) s = (s.slice(comma + 1) + " " + s.slice(0, comma)).replace(/\s+/g, " ").trim();
+    var parts = s.split(" ").map(function (w) {
+      return w.replace(/[^A-Za-z]/g, "");        // drops apostrophes, hyphens, periods
+    }).filter(function (w) {
+      return w && !NAME_SUFFIXES.test(w);
+    });
+    if (parts.length < 2) return "";             // need a first AND a last name
+    var last = parts[parts.length - 1];
+    // Casing is left as typed past the first letter, so McKenna stays McKenna.
+    return parts[0].charAt(0).toUpperCase() + last.charAt(0).toUpperCase() + last.slice(1);
+  }
+
+  function serialKey(serial) {
+    return String(serial || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  }
+
+  // { ok, name, problems[] } - problems are technician-facing sentences.
+  // A training PC has no end user, so it names itself instead of blocking.
+  function exportName(user, serial, trainingPC) {
+    var nk = trainingPC ? "TrainingPC" : nameKey(user);
+    var sk = serialKey(serial);
+    var problems = [];
+    if (!nk) {
+      var typed = String(user || "").trim();
+      problems.push(typed
+        ? 'User Being Deployed needs a first and last name - "' + typed + '" is only one name.'
+        : "User Being Deployed is empty.");
+    }
+    if (!sk) problems.push("Serial Number is empty.");
+    return { ok: !problems.length, name: nk + sk, problems: problems };
+  }
+
+  function downloadJson(obj, filename) {
+    var blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------------------------------------------------------------------
+  // Persistence
+  // ---------------------------------------------------------------------
+  // Categories whose print flow also emits a tracker import JSON. Add a
+  // category id here and its printed checklist starts exporting too.
+  var TRACKER_EXPORT_CATEGORIES = ["laptop", "ipad"];
+
+  function exportsToTracker(catId) {
+    return TRACKER_EXPORT_CATEGORIES.indexOf(catId || activeCategory) !== -1;
+  }
+
+  // Config lives in localStorage, so a changed default alone never reaches an
+  // existing install — these run once per keyed migration. Text is only
+  // rewritten when it still matches the old default, so wording the
+  // technician has customized in edit mode is left alone.
+  function byId(list, id) {
+    return (list || []).find(function (x) { return x.id === id; }) || null;
+  }
+  function dropDeviceTypeSkip(entry, deviceType) {
+    if (!entry || !Array.isArray(entry.skipForDeviceTypes)) return;
+    entry.skipForDeviceTypes = entry.skipForDeviceTypes.filter(function (t) { return t !== deviceType; });
+  }
+  function replaceIfUnchanged(obj, key, oldText, newText) {
+    if (obj && obj[key] === oldText) obj[key] = newText;
+  }
+
+  var OLD_RETAIL_DESC = "Brand new device with Windows 11 Pro pre-installed and Autopilot running. Skip Phase 1.";
+  var NEW_RETAIL_DESC = "Brand new device with Windows 11 Pro pre-installed and Autopilot running. Windows 11 is still reinstalled — complete all phases.";
+  var OLD_PHASE1_SKIPNOTE = "Skip this phase entirely if the device is Fresh from Retail. Proceed directly to Phase 2.";
+  var OLD_PRE2_DETAIL = "Prepared Windows 11 Pro USB installer (if manual install needed)";
+  var NEW_PRE2_DETAIL = "Prepared Windows 11 Pro USB installer";
+
+  // Windows 11 is reinstalled on every device, retail included.
+  function applyWin11AlwaysReinstalled(cfg) {
+    var phase1 = byId(cfg.phases, "phase1");
+    dropDeviceTypeSkip(phase1, "retail");
+    replaceIfUnchanged(phase1, "skipNote", OLD_PHASE1_SKIPNOTE, "");
+    var pre2 = byId(cfg.prerequisites, "pre2");
+    dropDeviceTypeSkip(pre2, "retail");
+    replaceIfUnchanged(pre2, "detail", OLD_PRE2_DETAIL, NEW_PRE2_DETAIL);
+    replaceIfUnchanged(byId(cfg.deviceTypes, "retail"), "description", OLD_RETAIL_DESC, NEW_RETAIL_DESC);
+  }
+
+  var CONFIG_MIGRATIONS = {
+    win11AlwaysReinstalled: applyWin11AlwaysReinstalled
+  };
+
+  function migrateConfig(cfg, defaultsFn) {
+    var def = (defaultsFn || getDefaultConfig)();
+    var defPhasesById = {};
+    def.phases.forEach(function (p) { defPhasesById[p.id] = p; });
+    var defPrereqsById = {};
+    def.prerequisites.forEach(function (p) { defPrereqsById[p.id] = p; });
+    var defFinalById = {};
+    def.finalChecklist.forEach(function (f) { defFinalById[f.id] = f; });
+
+    (cfg.phases || []).forEach(function (p) {
+      var defP = defPhasesById[p.id];
+      if (p.requiresUserInteraction === undefined) p.requiresUserInteraction = defP ? !!defP.requiresUserInteraction : false;
+      if (p.skipForDeviceTypes === undefined) p.skipForDeviceTypes = defP ? (defP.skipForDeviceTypes || []).slice() : [];
+      if (p.skipForExistingUser === undefined) p.skipForExistingUser = defP ? !!defP.skipForExistingUser : false;
+      if (p.skipForLaptopOnly === undefined) p.skipForLaptopOnly = defP ? !!defP.skipForLaptopOnly : false;
+      var defStepsById = {};
+      (defP ? defP.steps : []).forEach(function (ds) { defStepsById[ds.id] = ds; });
+      (p.steps || []).forEach(function (s) {
+        if (s.optional === undefined) s.optional = false;
+        if (s.skipForExistingUser === undefined) {
+          var defS = defStepsById[s.id];
+          s.skipForExistingUser = defS ? !!defS.skipForExistingUser : false;
+        }
+      });
+      if (defP) {
+        p.steps = p.steps || [];
+        var cursor = 0;
+        defP.steps.forEach(function (defStep) {
+          var idx = p.steps.findIndex(function (s) { return s.id === defStep.id; });
+          if (idx !== -1) {
+            cursor = idx + 1;
+          } else {
+            p.steps.splice(cursor, 0, deepClone(defStep));
+            cursor++;
+          }
+        });
+      }
+    });
+    (cfg.prerequisites || []).forEach(function (p) {
+      var defP = defPrereqsById[p.id];
+      if (p.skipForDeviceTypes === undefined) p.skipForDeviceTypes = defP ? (defP.skipForDeviceTypes || []).slice() : [];
+    });
+    (cfg.finalChecklist || []).forEach(function (f) {
+      var defF = defFinalById[f.id];
+      if (f.requiresUserInteraction === undefined) f.requiresUserInteraction = defF ? !!defF.requiresUserInteraction : false;
+      if (f.skipForExistingUser === undefined) f.skipForExistingUser = defF ? !!defF.skipForExistingUser : false;
+      if (f.skipForLaptopOnly === undefined) f.skipForLaptopOnly = defF ? !!defF.skipForLaptopOnly : false;
+    });
+
+    // Keyed so a later deliberate edit isn't undone on the next load.
+    cfg.appliedMigrations = cfg.appliedMigrations || {};
+    Object.keys(CONFIG_MIGRATIONS).forEach(function (key) {
+      if (cfg.appliedMigrations[key]) return;
+      CONFIG_MIGRATIONS[key](cfg);
+      cfg.appliedMigrations[key] = true;
+    });
+    return cfg;
+  }
+  function getIpadDefaultConfig() {
+    return {
+      meta: {
+        title: "iPad / iOS Device Deployment Checklist",
+        subtitle: "McKenna Labs IT",
+        sop: "SOP-DEP-002",
+        revised: "August 27, 2026"
+      },
+      deviceTypes: [],
+      prerequisites: [
+        { id: "ipre1", item: "Credentials", detail: "User's M365 account credentials and IT admin credentials", skipForDeviceTypes: [] },
+        { id: "ipre2", item: "Temporary Access Pass", detail: "TAP generated for the user's account in Entra, unexpired and unused", skipForDeviceTypes: [] },
+        { id: "ipre3", item: "Network", detail: "Wi-Fi SSID: Hubble | Password: [See IT credentials doc]", skipForDeviceTypes: [] },
+        { id: "ipre4", item: "Device Passcode", detail: "Standard numeric device passcode: 92831 (site zip code)", skipForDeviceTypes: [] },
+        { id: "ipre5", item: "Intune", detail: "Device assigned to the iOS enrollment profile, with Deacom, RedZone, and Microsoft Defender targeted to the user", skipForDeviceTypes: [] },
+        { id: "ipre6", item: "Hardware", detail: "iPad, charging cable, and power source. Device must remain on power for the duration of setup", skipForDeviceTypes: [] },
+        { id: "ipre7", item: "References", detail: "Serial number, asset tag, assigned user, and primary work location confirmed", skipForDeviceTypes: [] }
+      ],
+      phases: [
+        {
+          id: "ipadphase1", number: 1, title: "Initial iOS Setup",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "i1-1", text: "Select English as the device language.", note: null, warning: null },
+            { id: "i1-2", text: "Select United States as the region.", note: null, warning: null },
+            { id: "i1-3", text: "Accept the default appearance setting.", note: null, warning: null },
+            { id: "i1-4", text: "Select \"Set Up Without Another Device.\"", note: null, warning: "Do not select the transfer or proximity setup option. Setting the device up from another device bypasses the enrollment path required by the following phases." }
+          ]
+        },
+        {
+          id: "ipadphase2", number: 2, title: "Network and Enrollment",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "i2-1", text: "Select \"Choose Another Network.\"", note: null, warning: null },
+            { id: "i2-2", text: "Connect to the Hubble network and enter the network password.", note: "See IT credentials doc for the current Hubble password.", warning: null },
+            { id: "i2-3", text: "Allow the device to register and retrieve its configuration.", note: "Wait period: a few minutes. Do not interact with the device until the enrollment prompt appears.", warning: null },
+            { id: "i2-4", text: "Confirm the device presents enrollment under McKenna Labs, then press Enroll.", note: null, warning: "If the device does not present McKenna Labs enrollment, stop. Do not continue setup. Verify the enrollment profile assignment in Intune before proceeding." },
+            { id: "i2-5", text: "While the device configures, confirm that a Temporary Access Pass for the user's account has been created and is ready for use.", note: "Parallel action: complete this while the device finishes the previous step. The Temporary Access Pass is required for the sign-in in Phase 3.", warning: null }
+          ]
+        },
+        {
+          id: "ipadphase3", number: 3, title: "Passcode and Sign-In",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "i3-1", text: "When prompted to create a passcode, select Passcode Options, then Custom Numeric Code.", note: null, warning: null },
+            { id: "i3-2", text: "Set the device passcode to 92831.", note: "Standard passcode for all iPad deployments. This is the site zip code, not an account credential.", warning: null },
+            { id: "i3-3", text: "Confirm the passcode when prompted to re-enter it.", note: null, warning: null },
+            { id: "i3-4", text: "Sign in with the user's associated account.", note: "Use the Temporary Access Pass confirmed in Phase 2 where prompted.", warning: null },
+            { id: "i3-5", text: "Agree to the terms and conditions.", note: null, warning: null },
+            { id: "i3-6", text: "Allow the sign-in process to finalize.", note: "Wait period: 10 to 15 minutes.", warning: "Do not restart, lock, or otherwise interrupt the device during this step." }
+          ]
+        },
+        {
+          id: "ipadphase4", number: 4, title: "Remaining Setup Screens",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "i4-1", text: "Accept the default selection for all remaining setup prompts, with the single exception below.", note: null, warning: null },
+            { id: "i4-2", text: "Select \"Set Up Later\" for Siri.", note: "This is the only prompt in this phase where the default is not accepted.", warning: null },
+            { id: "i4-3", text: "Press Get Started when prompted.", note: null, warning: null }
+          ]
+        },
+        {
+          id: "ipadphase5", number: 5, title: "Company Portal Enrollment",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "i5-1", text: "Open Company Portal.", note: null, warning: "Critical. Do not launch any other application before this phase is complete. Opening another application first can prevent Company Portal from taking management of the device." },
+            { id: "i5-2", text: "Sign in with the user account.", note: null, warning: null },
+            { id: "i5-3", text: "Press OK.", note: null, warning: null },
+            { id: "i5-4", text: "Allow notifications.", note: null, warning: null },
+            { id: "i5-5", text: "Begin device setup so that Company Portal manages the device.", note: "Wait period: 5 to 10 minutes.", warning: null },
+            { id: "i5-6", text: "Dismiss any pop-ups from Apple Account, Siri, or other optional services, and allow Company Portal to finish.", note: "Dismissing these prompts does not interrupt enrollment. Do not sign in to any optional service at this point.", warning: null },
+            { id: "i5-7", text: "Confirm the device reports access to company resources.", note: null, warning: "Do not proceed to Phase 6 until company resource access is confirmed. Application deployment depends on completed management enrollment." }
+          ]
+        },
+        {
+          id: "ipadphase6", number: 6, title: "Application Deployment",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "i6-1", text: "Confirm that required applications are pushing automatically from Intune. No technician action is required to initiate the deployment.", note: null, warning: null },
+            { id: "i6-2", text: "Leave the iPad stationary at the home screen until both Deacom and RedZone appear as available applications.", note: "Wait period: duration varies. Do not interact with the device, launch applications, or lock the screen until both applications are present.", warning: null }
+          ]
+        },
+        {
+          id: "ipadphase7", number: 7, title: "Security Verification",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false,
+          steps: [
+            { id: "i7-1", text: "Launch Microsoft Defender.", note: null, warning: null },
+            { id: "i7-2", text: "Grant device and network access when prompted.", note: null, warning: null },
+            { id: "i7-3", text: "Confirm that both network protection and device protection report as enabled and secure.", note: null, warning: "If either protection does not report as enabled and secure, the device is not ready for handoff. Resolve before continuing to Phase 8." }
+          ]
+        },
+        {
+          id: "ipadphase8", number: 8, title: "Handoff",
+          skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: true,
+          steps: [
+            { id: "i8-1", text: "Confirm every phase above is verified complete and the Final Verification section is fully checked.", note: null, warning: null },
+            { id: "i8-2", text: "Hand the device to the assigned user.", note: null, warning: null }
+          ]
+        }
+      ],
+      finalChecklist: [
+        { id: "ifc1", text: "Language and region set to English (United States)" },
+        { id: "ifc2", text: "Device connected to the Hubble network" },
+        { id: "ifc3", text: "Device enrolled under McKenna Labs" },
+        { id: "ifc4", text: "Temporary Access Pass confirmed created and available" },
+        { id: "ifc5", text: "Device passcode set and confirmed" },
+        { id: "ifc6", text: "User signed in with their associated account" },
+        { id: "ifc7", text: "Siri set to Set Up Later" },
+        { id: "ifc8", text: "Company Portal completed device setup and manages the device" },
+        { id: "ifc9", text: "Device reports access to company resources" },
+        { id: "ifc10", text: "Deacom present on the device" },
+        { id: "ifc11", text: "RedZone present on the device" },
+        { id: "ifc12", text: "Microsoft Defender network protection enabled and secure" },
+        { id: "ifc13", text: "Microsoft Defender device protection enabled and secure" },
+        { id: "ifc14", text: "Serial number, asset tag, and user assignment recorded in the asset system" }
+      ]
+    };
+  }
+
+  function loadConfig(category) {
+    var store = CATEGORY_STORAGE[category];
+    try {
+      var raw = localStorage.getItem(store.configKey);
+      if (raw) {
+        var cfg = migrateConfig(JSON.parse(raw), store.getDefaultConfig);
+        localStorage.setItem(store.configKey, JSON.stringify(cfg));
+        return cfg;
+      }
+    } catch (e) { /* fall through to default */ }
+    var def = store.getDefaultConfig();
+    localStorage.setItem(store.configKey, JSON.stringify(def));
+    return def;
+  }
+  function saveConfig() { localStorage.setItem(CATEGORY_STORAGE[activeCategory].configKey, JSON.stringify(config)); }
+
+  function newSession() {
+    return {
+      sessionId: uid("sess"),
+      technician: "", user: "", device: "",
+      assetTag: "", model: "",
+      date: todayStr(),
+      deviceType: null,
+      trainingPC: false,
+      existingUser: false,
+      laptopOnly: false,
+      notes: "",
+      physConditionNone: false, physConditionNotes: "",
+      checkedSteps: {}, prereqChecked: {}, finalChecked: {}, manualSkippedSections: {},
+      startTime: null,
+      lastUpdated: Date.now()
+    };
+  }
+  function loadSession(category) {
+    var store = CATEGORY_STORAGE[category];
+    try {
+      var raw = localStorage.getItem(store.sessionKey);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        parsed.manualSkippedSections = parsed.manualSkippedSections || {};
+        parsed.existingUser = !!parsed.existingUser;
+        parsed.laptopOnly = !!parsed.laptopOnly;
+        return parsed;
+      }
+    } catch (e) { /* fall through */ }
+    return newSession();
+  }
+  function saveSession() {
+    session.lastUpdated = Date.now();
+    localStorage.setItem(CATEGORY_STORAGE[activeCategory].sessionKey, JSON.stringify(session));
+    persistSessionToHistory();
+  }
+  function loadHistory(category) {
+    try {
+      var raw = localStorage.getItem(CATEGORY_STORAGE[category].historyKey);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* fall through */ }
+    return [];
+  }
+  function saveHistory() { localStorage.setItem(CATEGORY_STORAGE[activeCategory].historyKey, JSON.stringify(history)); }
+
+  function loadActiveCategory() {
+    try { return localStorage.getItem(ACTIVE_CATEGORY_KEY) || null; } catch (e) { return null; }
+  }
+  function saveActiveCategory() {
+    if (activeCategory) localStorage.setItem(ACTIVE_CATEGORY_KEY, activeCategory);
+    else localStorage.removeItem(ACTIVE_CATEGORY_KEY);
+  }
+
+  function loadUiState() {
+    try {
+      var raw = localStorage.getItem(UI_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        parsed.censor = !!parsed.censor;
+        return parsed;
+      }
+    } catch (e) { /* fall through */ }
+    return { theme: "dark", censor: false };
+  }
+  function saveUiState() { localStorage.setItem(UI_KEY, JSON.stringify(uiState)); }
+  function applyTheme() { document.documentElement.setAttribute("data-theme", uiState.theme === "light" ? "light" : "dark"); }
+  function setTheme(theme) {
+    uiState.theme = theme === "light" ? "light" : "dark";
+    saveUiState();
+    applyTheme();
+  }
+  function setCensor(on) {
+    uiState.censor = !!on;
+    saveUiState();
+  }
+
+  function persistSessionToHistory() {
+    var hasProgress = session.technician || session.user || session.device ||
+      Object.keys(session.checkedSteps).length || Object.keys(session.finalChecked).length ||
+      Object.keys(session.prereqChecked).length || session.deviceType;
+    if (!hasProgress) return;
+    var record = {
+      sessionId: session.sessionId,
+      date: session.date,
+      technician: session.technician,
+      user: session.user,
+      device: session.device,
+      deviceType: session.deviceType,
+      completion: computeCompletionPct(),
+      snapshot: { config: deepClone(config), session: deepClone(session) }
+    };
+    var idx = history.findIndex(function (h) { return h.sessionId === record.sessionId; });
+    if (idx >= 0) history[idx] = record; else history.unshift(record);
+    history.sort(function (a, b) { return (b.snapshot.session.lastUpdated || 0) - (a.snapshot.session.lastUpdated || 0); });
+    history = history.slice(0, 10);
+    saveHistory();
+  }
+
+  // ---------------------------------------------------------------------
+  // Derived logic
+  // ---------------------------------------------------------------------
+  function isPhaseSkipped(phase, sess) {
+    sess = sess || session;
+    var deviceSkip = !!(sess.deviceType && phase.skipForDeviceTypes && phase.skipForDeviceTypes.indexOf(sess.deviceType) !== -1);
+    var trainingSkip = !!(sess.trainingPC && phase.requiresUserInteraction);
+    var existingUserSkip = !!(sess.existingUser && phase.skipForExistingUser);
+    var laptopOnlySkip = !!(sess.laptopOnly && phase.skipForLaptopOnly);
+    return deviceSkip || trainingSkip || existingUserSkip || laptopOnlySkip;
+  }
+  function sectionKey(phaseId, sectionName) { return phaseId + "::" + sectionName; }
+  function isSectionSkipped(phaseId, sectionName, sess) {
+    sess = sess || session;
+    return !!(sess.manualSkippedSections && sess.manualSkippedSections[sectionKey(phaseId, sectionName)]);
+  }
+  function isStepSectionSkipped(phaseId, step, sess) {
+    sess = sess || session;
+    var manualSkip = step.section ? isSectionSkipped(phaseId, step.section, sess) : false;
+    var existingUserSkip = !!(sess.existingUser && step.skipForExistingUser);
+    return manualSkip || existingUserSkip;
+  }
+  function isSectionAutoSkippedForExistingUser(phase, sectionName, sess) {
+    sess = sess || session;
+    if (!sess.existingUser) return false;
+    var sectionSteps = phase.steps.filter(function (s) { return s.section === sectionName; });
+    return sectionSteps.length > 0 && sectionSteps.every(function (s) { return !!s.skipForExistingUser; });
+  }
+  function isPrereqSkipped(prereq, sess) {
+    sess = sess || session;
+    return !!(sess.deviceType && prereq.skipForDeviceTypes && prereq.skipForDeviceTypes.indexOf(sess.deviceType) !== -1);
+  }
+  function isPhaseComplete(phase, sess) {
+    sess = sess || session;
+    if (isPhaseSkipped(phase, sess)) return false;
+    if (!phase.steps.length) return false;
+    return phase.steps.every(function (s) { return s.optional || isStepSectionSkipped(phase.id, s, sess) || !!sess.checkedSteps[s.id]; });
+  }
+  function computeProgress(sess) {
+    sess = sess || session;
+    // phases requiring the end user present (Hardware Handoff, MFA) happen in person after
+    // the build is done and aren't reliably completable at the bench — don't count them
+    // toward the phase/step progress total.
+    var applicable = config.phases.filter(function (p) { return !p.requiresUserInteraction && !isPhaseSkipped(p, sess); });
+    var phasesComplete = applicable.filter(function (p) { return isPhaseComplete(p, sess); }).length;
+    var totalSteps = 0, checkedSteps = 0;
+    applicable.forEach(function (p) {
+      var requiredSteps = p.steps.filter(function (s) { return !s.optional && !isStepSectionSkipped(p.id, s, sess); });
+      totalSteps += requiredSteps.length;
+      requiredSteps.forEach(function (s) { if (sess.checkedSteps[s.id]) checkedSteps++; });
+    });
+    return { phasesComplete: phasesComplete, totalPhases: applicable.length, checkedSteps: checkedSteps, totalSteps: totalSteps };
+  }
+  function isFinalItemSkipped(item, sess) {
+    sess = sess || session;
+    var trainingSkip = !!(sess.trainingPC && item.requiresUserInteraction);
+    var existingUserSkip = !!(sess.existingUser && item.skipForExistingUser);
+    var laptopOnlySkip = !!(sess.laptopOnly && item.skipForLaptopOnly);
+    return trainingSkip || existingUserSkip || laptopOnlySkip;
+  }
+  function configHasExistingUserToggle(c) {
+    c = c || config;
+    return c.phases.some(function (p) { return !!p.skipForExistingUser || (p.steps || []).some(function (s) { return !!s.skipForExistingUser; }); }) ||
+      (c.finalChecklist || []).some(function (f) { return !!f.skipForExistingUser; });
+  }
+  function configHasLaptopOnlyToggle(c) {
+    c = c || config;
+    return c.phases.some(function (p) { return !!p.skipForLaptopOnly; }) ||
+      (c.finalChecklist || []).some(function (f) { return !!f.skipForLaptopOnly; });
+  }
+  function computeCompletionPct() {
+    var prog = computeProgress(session);
+    var applicableFinal = config.finalChecklist.filter(function (f) { return !isFinalItemSkipped(f); });
+    var finalChecked = applicableFinal.filter(function (f) { return session.finalChecked[f.id]; }).length;
+    var totalUnits = prog.totalSteps + applicableFinal.length;
+    var doneUnits = prog.checkedSteps + finalChecked;
+    return totalUnits ? Math.round((doneUnits / totalUnits) * 100) : 0;
+  }
+  function isFinalComplete(sess) {
+    sess = sess || session;
+    var applicable = config.finalChecklist.filter(function (f) { return !isFinalItemSkipped(f, sess); });
+    return applicable.length > 0 && applicable.every(function (f) { return !!sess.finalChecked[f.id]; }) && isPhysicalConditionSatisfied(sess);
+  }
+  function isPhysicalConditionSatisfied(sess) {
+    sess = sess || session;
+    if (sess.deviceType !== "refresh") return true;
+    return !!(sess.physConditionNone || (sess.physConditionNotes && sess.physConditionNotes.trim()));
+  }
+  // iPad asset tags follow Apple's device-naming convention rather than the
+  // MLI-XXXX tag used for laptops, so the field is not force-uppercased for
+  // this category. Derived from the user's first name: "Christian's iPad".
+  function deriveIpadAssetTag(user) {
+    var first = String(user || "").replace(/\s+/g, " ").trim().split(" ")[0] || "";
+    first = first.replace(/[^A-Za-z'-]/g, "");
+    if (!first) return "";
+    return first.charAt(0).toUpperCase() + first.slice(1) + "'s iPad";
+  }
+
+  // Fills the tag in, and keeps it in step when the user name changes, but
+  // never overwrites a tag the technician typed themselves.
+  function applyIpadAssetTagDefault(sess) {
+    sess = sess || session;
+    if (activeCategory !== "ipad") return false;
+    var current = String(sess.assetTag || "").trim();
+    if (current && !/'s iPad$/.test(current)) return false;
+    var derived = deriveIpadAssetTag(sess.user);
+    if (!derived || derived === current) return false;
+    sess.assetTag = derived;
+    return true;
+  }
+
+  // Records when the session began. Feeds dateStarted on the tracker
+  // export; no elapsed time is derived from it.
+  function touchStartTime() {
+    if (!session.startTime) session.startTime = Date.now();
+  }
+  function confirmMarkAll() {
+    return confirm("Mark everything in this section complete?\n\nOnly do this if you have personally verified every item — do not use this as a shortcut to skip verification.");
+  }
+
+  // ---------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------
+  var activeCategory = loadActiveCategory();
+  (function () {
+    var def = activeCategory ? DEVICE_CATEGORIES.find(function (c) { return c.id === activeCategory; }) : null;
+    if (!def) activeCategory = null; // unknown/removed category (e.g. stale localStorage) — back to the menu
+  })();
+  var config = null, session = null, history = [];
+  if (activeCategory && CATEGORY_STORAGE[activeCategory]) {
+    config = loadConfig(activeCategory);
+    session = loadSession(activeCategory);
+    history = loadHistory(activeCategory);
+  }
+  var uiState = loadUiState();
+  var mode = "deploy"; // "deploy" | "edit"
+  var collapsedPhases = {}; // phaseId -> bool (manual/auto collapse state)
+  var draftConfig = null; // used while in edit mode
+  var optionsOpen = false;
+
+  // ---------------------------------------------------------------------
+  // Rendering — Deploy Mode
+  // ---------------------------------------------------------------------
+  function renderApp() {
+    var app = document.getElementById("app");
+    if (!activeCategory) {
+      app.innerHTML = renderOptionsMenu() + renderCategorySelectView();
+      hideFooter();
+      bindEvents();
+      return;
+    }
+    if (!config || !session) {
+      app.innerHTML = renderOptionsMenu() + renderCategoryPlaceholderView();
+      hideFooter();
+      bindEvents();
+      return;
+    }
+    if (mode === "edit") {
+      app.innerHTML = renderOptionsMenu() + renderTopBar() + renderEditView();
+    } else {
+      app.innerHTML = renderOptionsMenu() + renderTopBar() + renderDeployView();
+    }
+    renderFooter();
+    bindEvents();
+  }
+
+  function renderCategorySelectView() {
+    var html = '<div id="category-select">';
+    html += '<h1>What are you deploying?</h1>';
+    html += '<p class="category-select-sub">Choose the device type to load the right checklist.</p>';
+    html += '<div class="category-grid">';
+    DEVICE_CATEGORIES.forEach(function (cat) {
+      html += '<div class="category-card' + (cat.functional ? "" : " category-card-stub") + '" data-select-category="' + esc(cat.id) + '">' +
+        '<div class="category-card-label">' + esc(cat.label) + (cat.functional ? "" : ' <span class="badge badge-skip">Not Built Yet</span>') + '</div>' +
+        '<div class="category-card-desc">' + esc(cat.description) + '</div></div>';
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderCategoryPlaceholderView() {
+    var cat = DEVICE_CATEGORIES.find(function (c) { return c.id === activeCategory; }) || { label: "This device type" };
+    var html = '<div id="category-select">';
+    html += '<button class="ghost" id="btn-back-to-category">&larr; Back to Device Type Menu</button>';
+    html += '<h1 style="margin-top:16px">' + esc(cat.label) + '</h1>';
+    html += '<p class="category-select-sub">There isn\'t a checklist built for this device type yet — it\'s on the list. Pick "Standard Laptop / Desktop" for now, or check back once this one is set up.</p>';
+    html += '</div>';
+    return html;
+  }
+
+  function hideFooter() {
+    var f = document.getElementById("session-footer");
+    if (f) f.style.display = "none";
+  }
+
+  function renderOptionsMenu() {
+    var html = '<div id="options-wrap">';
+    html += '<button id="btn-options-toggle" class="ghost" title="Options">⚙ Options</button>';
+    if (optionsOpen) {
+      html += '<div id="options-panel">';
+      html += '<div class="options-group"><label>Theme</label><div class="theme-toggle-row">' +
+        '<button class="small ' + (uiState.theme === "light" ? "ghost" : "primary") + '" data-theme-choice="dark">🌙 Dark</button>' +
+        '<button class="small ' + (uiState.theme === "light" ? "primary" : "ghost") + '" data-theme-choice="light">☀ Light</button>' +
+        '</div></div>';
+      html += '<div class="options-group"><label>Censor Mode</label><div class="theme-toggle-row">' +
+        '<button class="small ' + (uiState.censor ? "ghost" : "primary") + '" data-censor-choice="off">Off</button>' +
+        '<button class="small ' + (uiState.censor ? "primary" : "ghost") + '" data-censor-choice="on">On</button>' +
+        '</div><div class="options-hint">Masks names, serials, asset tags, notes and company identifiers for screenshots. Display only, nothing saved or exported changes. Shortcut: Alt + C.</div></div>';
+      if (config && mode === "deploy") {
+        html += '<div class="options-group"><button id="btn-edit-mode" class="primary" style="width:100%">🔒 Edit Mode</button></div>';
+      }
+      if (activeCategory) {
+        html += '<div class="options-group"><button id="btn-change-category" class="ghost" style="width:100%">↺ Change Device Type</button></div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderTopBar() {
+    var prog = computeProgress(session);
+    var pct = prog.totalSteps ? Math.round((prog.checkedSteps / prog.totalSteps) * 100) : 0;
+    var html = '<header id="topbar">';
+    html += '<div class="brand"><div><h1>' + esc(config.meta.title) + '</h1>' +
+      '<div class="sop">' + esc(config.meta.subtitle) + ' &middot; ' + esc(config.meta.sop) + ' &middot; Revised ' + esc(config.meta.revised) + '</div></div>';
+    html += '<div class="row" style="gap:8px">';
+    if (mode === "edit") {
+      html += '<span class="badge badge-editing">EDITING</span>';
+    }
+    if (uiState.censor) {
+      html += '<span class="badge badge-censor">' + (mode === "edit" ? "CENSOR PAUSED" : "CENSOR MODE") + '</span>';
+    }
+    html += '</div></div>';
+
+    if (mode === "deploy") {
+      html += '<div class="session-fields">' +
+        field("Technician", "technician", session.technician, "title") +
+        field("User Being Deployed", "user", session.user, "title") +
+        field("Device Serial", "device", session.device, "upper") +
+        field("Asset Tag", "assetTag", session.assetTag, activeCategory === "ipad" ? null : "upper") +
+        field("Model", "model", session.model, "upper") +
+        (censorOn()
+          ? '<div class="col"><label>Date</label><input type="text" class="censored-input" value="' + CENSOR_BLOCK + '" readonly title="Hidden by censor mode"></div>'
+          : '<div class="col"><label>Date</label><input type="date" data-field="date" value="' + esc(session.date) + '"></div>') +
+        '</div>';
+
+      if (config.deviceTypes.length) {
+        html += '<div class="device-types">';
+        config.deviceTypes.forEach(function (dt) {
+          var active = session.deviceType === dt.id ? " active" : "";
+          html += '<div class="device-type-btn' + active + '" data-devicetype="' + esc(dt.id) + '">' +
+            '<div class="label">' + esc(dt.label) + '</div>' +
+            '<div class="desc">' + esc(dt.description) + '</div></div>';
+        });
+        html += '</div>';
+      }
+
+      var showTrainingPC = config.deviceTypes.length > 0;
+      var showExistingUser = configHasExistingUserToggle(config);
+      var showLaptopOnly = configHasLaptopOnlyToggle(config);
+      if (showTrainingPC || showExistingUser || showLaptopOnly) {
+        html += '<div class="session-modifiers">';
+        html += '<div class="session-modifiers-label">Session Options</div>';
+        html += '<div class="session-modifiers-row">';
+        if (showTrainingPC) {
+          html += '<button type="button" class="modifier-chip' + (session.trainingPC ? " active" : "") + '" data-training-pc="1" title="No end user — skip steps that need one">Training PC</button>';
+        }
+        if (showExistingUser) {
+          html += '<button type="button" class="modifier-chip' + (session.existingUser ? " active" : "") + '" data-existing-user="1" title="Skips Teams/Outlook/Browser sign-in steps and MFA setup">Existing User</button>';
+        }
+        if (showLaptopOnly) {
+          html += '<button type="button" class="modifier-chip' + (session.laptopOnly ? " active" : "") + '" data-laptop-only="1" title="Skips Hardware & Workspace Setup">Laptop-Only (No Peripherals)</button>';
+        }
+        html += '</div></div>';
+      }
+
+      html += '<div class="progress-row">' +
+        '<div class="progress-stat"><b>' + prog.phasesComplete + ' of ' + prog.totalPhases + '</b> phases complete</div>' +
+        '<div class="progress-bar-track"><div class="progress-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="progress-stat"><b>' + prog.checkedSteps + ' of ' + prog.totalSteps + '</b> steps checked</div>' +
+        '</div>';
+
+      html += '<div class="toolbar">' +
+        '<button id="btn-print" class="ghost">🖨 Print</button>' +
+        '<button id="btn-export-session" class="ghost">Export Session</button>' +
+        '<button id="btn-history" class="ghost">History</button>' +
+        '<button id="btn-new-session" class="ghost">New Session</button>' +
+        '</div>';
+    } else {
+      html += '<div class="toolbar">' +
+        '<button id="btn-edit-save" class="success">Save Changes</button>' +
+        '<button id="btn-edit-discard" class="ghost">Discard &amp; Return</button>' +
+        '<button id="btn-export-config" class="ghost">Export Config</button>' +
+        '<label class="ghost" style="display:inline-flex;align-items:center;padding:8px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">' +
+        'Import Config<input type="file" id="input-import-config" accept="application/json" style="display:none">' +
+        '</label>' +
+        '<button id="btn-reset-default" class="danger">Reset to Default</button>' +
+        '</div>';
+    }
+    html += "</header>";
+    return html;
+  }
+
+  function field(label, key, value, transform) {
+    // In censor mode the input is masked and read-only, and it drops its
+    // data-field binding so a masked value can never be written back over
+    // the real one.
+    if (censorOn()) {
+      return '<div class="col"><label>' + esc(label) + '</label>' +
+        '<input type="text" class="censored-input" value="' + cen(value) + '" readonly title="Hidden by censor mode"></div>';
+    }
+    var attr = transform ? ' data-transform="' + transform + '"' : '';
+    return '<div class="col"><label>' + esc(label) + '</label>' +
+      '<input type="text" data-field="' + key + '"' + attr + ' value="' + esc(value) + '"></div>';
+  }
+
+  function firstHandoffIndex(phases) {
+    for (var i = 0; i < phases.length; i++) {
+      if (phases[i].requiresUserInteraction) return i;
+    }
+    return -1;
+  }
+  function renderHandoffDivider() {
+    return '<div class="handoff-divider">' +
+      '<span class="handoff-divider-label">Device Handoff</span>' +
+      '<span class="handoff-divider-sub">Complete at the user\'s desk — the build above is done.</span>' +
+      '</div>';
+  }
+
+  function renderDeployView() {
+    var html = renderPrerequisites();
+    html += renderPhysicalConditionCard();
+    var handoffIdx = firstHandoffIndex(config.phases);
+    html += config.phases.map(function (p, i) {
+      return (i === handoffIdx ? renderHandoffDivider() : "") + renderPhaseCard(p);
+    }).join("");
+    html += renderFinalChecklistCard();
+    html += renderNotesCard();
+    return html;
+  }
+
+  function renderPhysicalConditionCard() {
+    if (!config.deviceTypes.length) return "";
+    var skippedForRetail = session.deviceType === "retail";
+    var required = session.deviceType === "refresh";
+    var satisfied = isPhysicalConditionSatisfied();
+    var badge;
+    if (skippedForRetail) badge = '<span class="badge badge-skip">Skip</span>';
+    else if (required && !satisfied) badge = '<span class="badge badge-warning">Required — Refresh</span>';
+    else if (required) badge = '<span class="badge badge-complete">✓ Documented</span>';
+    else badge = '<span class="badge badge-skip">Optional</span>';
+
+    var html = '<div class="prereq-card' + (skippedForRetail ? " skipped" : "") + '"><h2><span>Physical Condition</span>' + badge + '</h2>';
+    if (skippedForRetail) {
+      html += '<div class="skip-note">Skipped — Fresh from Retail devices should have no pre-existing damage.</div>';
+    } else if (required && !satisfied) {
+      html += '<div class="callout callout-warning">Required for Refresh / Redeployed devices — document any pre-existing damage before this deployment is considered complete.</div>';
+    }
+    html += '<label class="checkbox-inline" style="margin-bottom:8px"><input type="checkbox" data-phys-none="1" ' + (session.physConditionNone ? "checked" : "") + (skippedForRetail ? " disabled" : "") + '> No pre-existing damage observed</label>';
+    if (censorOn()) {
+      html += '<textarea class="censored-input" readonly title="Hidden by censor mode">' +
+        (session.physConditionNotes && session.physConditionNotes.trim() ? CENSOR_BLOCK_LONG : "") + '</textarea>';
+    } else {
+      html += '<textarea data-field="physConditionNotes"' + ((session.physConditionNone || skippedForRetail) ? " disabled" : "") +
+        ' placeholder="Document any pre-existing physical damage — scratches, dents, cracks, missing keys, battery swelling, etc.">' + esc(session.physConditionNotes || "") + '</textarea>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderPrerequisites() {
+    var applicablePrereqs = config.prerequisites.filter(function (p) { return !isPrereqSkipped(p); });
+    var doneCount = applicablePrereqs.filter(function (p) { return session.prereqChecked[p.id]; }).length;
+    var allDone = applicablePrereqs.length > 0 && doneCount === applicablePrereqs.length;
+    var collapsed = collapsedPhases["prereqs"] !== undefined ? collapsedPhases["prereqs"] : allDone;
+
+    var html = '<div class="prereq-card"><h2 data-toggle-prereqs="1"><span>Prerequisites' +
+      (applicablePrereqs.length ? ' <span class="progress-stat">(' + doneCount + ' of ' + applicablePrereqs.length + ')</span>' : '') +
+      '</span>';
+    if (allDone) html += '<span class="badge badge-complete">✓ Complete</span>';
+    if (config.prerequisites.length && !collapsed) {
+      html += '<button class="small" data-mark-all-prereq="1">Mark All Complete</button>';
+    }
+    html += '<span class="phase-chevron' + (collapsed ? " collapsed" : "") + '">▾</span>';
+    html += '</h2>';
+
+    if (!collapsed) {
+      if (!config.prerequisites.length) {
+        html += '<div class="empty-msg">No prerequisites configured.</div>';
+      }
+      config.prerequisites.forEach(function (p) {
+        var skipped = isPrereqSkipped(p);
+        var checked = session.prereqChecked[p.id] ? "checked" : "";
+        html += '<div class="prereq-row' + (skipped ? " skipped" : "") + '">' +
+          '<input type="checkbox" data-prereq="' + esc(p.id) + '" ' + checked + (skipped ? " disabled" : "") + '>' +
+          '<div><div class="item">' + esc(p.item) + (skipped ? ' <span class="badge badge-skip">Skip</span>' : '') + '</div><div class="detail">' + esc(p.detail) + '</div></div>' +
+          '</div>';
+      });
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function renderPhaseCard(phase) {
+    var skipped = isPhaseSkipped(phase);
+    var trainingSkipped = !!(session.trainingPC && phase.requiresUserInteraction);
+    var existingUserSkipped = !!(session.existingUser && phase.skipForExistingUser);
+    var laptopOnlySkipped = !!(session.laptopOnly && phase.skipForLaptopOnly);
+    var complete = isPhaseComplete(phase);
+    var collapsed = skipped || (collapsedPhases[phase.id] !== undefined ? collapsedPhases[phase.id] : complete);
+    var classes = "phase-card" + (skipped ? " skipped" : "");
+    var html = '<div class="' + classes + '" data-phase="' + esc(phase.id) + '">';
+    html += '<div class="phase-header" data-toggle-phase="' + esc(phase.id) + '">' +
+      '<div class="phase-num">' + phase.number + '</div>' +
+      '<h3>' + esc(phase.title) + '</h3>';
+    if (skipped) html += '<span class="badge badge-skip">Skip</span>';
+    else if (complete) html += '<span class="badge badge-complete">✓ Complete</span>';
+    if (!skipped && !complete && phase.steps.length) {
+      html += '<button class="small" data-mark-all-phase="' + esc(phase.id) + '">Mark All Complete</button>';
+    }
+    html += '<span class="phase-chevron' + (collapsed ? " collapsed" : "") + '">▾</span>';
+    html += '</div>';
+
+    if (skipped && phase.skipNote) {
+      html += '<div class="skip-note">' + esc(phase.skipNote) + '</div>';
+    } else if (trainingSkipped) {
+      html += '<div class="skip-note">Skipped — this device is marked as a Training PC with no assigned end user.</div>';
+    } else if (existingUserSkipped) {
+      html += '<div class="skip-note">Skipped — marked as an Existing User session.</div>';
+    } else if (laptopOnlySkipped) {
+      html += '<div class="skip-note">Skipped — marked as a Laptop-Only (No Peripherals) session.</div>';
+    }
+
+    if (!collapsed) {
+      html += '<div class="phase-body">';
+      var lastSection = null;
+      phase.steps.forEach(function (s) {
+        if (s.section && s.section !== lastSection) {
+          var manualSecSkipped = isSectionSkipped(phase.id, s.section);
+          var autoSecSkipped = isSectionAutoSkippedForExistingUser(phase, s.section);
+          var secSkipped = manualSecSkipped || autoSecSkipped;
+          html += '<div class="section-label-row' + (secSkipped ? " skipped" : "") + '">' +
+            '<span class="section-label">' + esc(s.section) + (secSkipped ? ' <span class="badge badge-skip">Skip</span>' : '') + '</span>' +
+            (autoSecSkipped
+              ? '<span class="section-skip-btn ghost small" style="opacity:.6">Auto-skipped (Existing User)</span>'
+              : '<button class="small ghost section-skip-btn" data-toggle-skip-section="1" data-section-phase="' + esc(phase.id) + '" data-section-name="' + esc(s.section) + '">' + (manualSecSkipped ? "Unskip" : "Skip") + '</button>') +
+            '</div>';
+          lastSection = s.section;
+        }
+        var stepSkipped = skipped || isStepSectionSkipped(phase.id, s);
+        var checked = !!session.checkedSteps[s.id];
+        html += '<div class="step-row' + (stepSkipped && !skipped ? " section-skipped" : "") + '">' +
+          '<input type="checkbox" data-step="' + esc(s.id) + '" data-phase-of-step="' + esc(phase.id) + '" ' + (checked ? "checked" : "") + (stepSkipped ? " disabled" : "") + '>' +
+          '<div style="flex:1"><div class="step-text' + (checked ? " checked" : "") + '">' + esc(s.text) +
+          (s.optional ? ' <span class="badge badge-skip">If Applicable</span>' : '') + '</div>';
+        if (s.note) html += '<div class="callout callout-note">' + esc(s.note) + '</div>';
+        if (s.warning) html += '<div class="callout callout-warning">' + esc(s.warning) + '</div>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderFinalChecklistCard() {
+    var complete = isFinalComplete();
+    var html = '<div class="final-card"><h2><span>Final Checklist</span>' +
+      '<button id="btn-mark-all-final" class="small">Mark All Complete</button></h2>';
+    config.finalChecklist.forEach(function (f) {
+      var skipped = isFinalItemSkipped(f);
+      var checked = session.finalChecked[f.id] ? "checked" : "";
+      html += '<div class="final-row' + (skipped ? " skipped" : "") + '"><input type="checkbox" data-final="' + esc(f.id) + '" ' + checked + (skipped ? " disabled" : "") + '>' +
+        '<div>' + esc(f.text) + (skipped ? ' <span class="badge badge-skip">Skip</span>' : '') + '</div></div>';
+    });
+    if (complete) {
+      html += '<div class="banner-complete">✓ DEPLOYMENT COMPLETE</div>';
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function renderNotesCard() {
+    if (censorOn()) {
+      return '<div class="final-card"><h2><span>Notes</span><span class="progress-stat">(optional)</span></h2>' +
+        '<textarea class="censored-input" readonly title="Hidden by censor mode">' +
+        (session.notes && session.notes.trim() ? CENSOR_BLOCK_LONG : "") + '</textarea></div>';
+    }
+    return '<div class="final-card"><h2><span>Notes</span><span class="progress-stat">(optional)</span></h2>' +
+      '<textarea data-field="notes" placeholder="Anything worth noting about this deployment — issues, deviations, follow-ups...">' + esc(session.notes || "") + '</textarea>' +
+      '</div>';
+  }
+
+  function renderFooter() {
+    var prog = computeProgress(session);
+    var html = '<span><b>Tech:</b> ' + esc(cen(session.technician) || "—") + '</span>' +
+      '<span><b>User:</b> ' + esc(cen(session.user) || "—") + '</span>' +
+      '<span><b>Device:</b> ' + esc(cen(session.device) || "—") + '</span>' +
+      '<span><b>Date:</b> ' + esc(cen(session.date)) + '</span>' +
+      '<span><b>Progress:</b> ' + prog.phasesComplete + '/' + prog.totalPhases + ' phases</span>';
+    document.getElementById("session-footer") || (function () {
+      var f = document.createElement("footer"); f.id = "session-footer"; document.body.appendChild(f);
+    })();
+    var footerEl = document.getElementById("session-footer");
+    footerEl.innerHTML = html;
+    footerEl.style.display = "flex";
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering — Edit Mode
+  // ---------------------------------------------------------------------
+  function renderEditView() {
+    var c = draftConfig;
+    var html = '<div id="edit-view">';
+    html += '<div class="note-notice">Do not store passwords or other credentials in step text — this file may be shared or version controlled. Reference a secure credentials document instead.</div>';
+    if (uiState.censor) {
+      html += '<div class="note-notice">Censor mode is paused while editing so you are working against the real content. It resumes when you return to Deploy Mode.</div>';
+    }
+
+    // Meta
+    html += '<div class="edit-section"><h2>Checklist Meta</h2><div class="row">' +
+      metaField("Title", "title", c.meta.title) +
+      metaField("Subtitle", "subtitle", c.meta.subtitle) +
+      metaField("SOP Number", "sop", c.meta.sop) +
+      metaField("Revised Date", "revised", c.meta.revised) +
+      '</div></div>';
+
+    // Device types
+    html += '<div class="edit-section"><h2>Device Types</h2>';
+    c.deviceTypes.forEach(function (dt, i) {
+      html += '<div class="edit-item-row" data-dt-index="' + i + '">' +
+        '<div class="row-top"><div class="col"><label>Label</label><input type="text" data-dt-field="label" data-dt-index="' + i + '" value="' + esc(dt.label) + '"></div>' +
+        '<button class="danger small" data-remove-dt="' + i + '">Remove</button></div>' +
+        '<label>Description</label><textarea data-dt-field="description" data-dt-index="' + i + '">' + esc(dt.description) + '</textarea>' +
+        '</div>';
+    });
+    html += '<button id="btn-add-devicetype" class="ghost small">+ Add Device Type</button></div>';
+
+    // Prerequisites
+    html += '<div class="edit-section"><h2>Prerequisites</h2>';
+    c.prerequisites.forEach(function (p, i) {
+      html += '<div class="edit-item-row">' +
+        '<div class="row-top">' +
+        '<button class="ghost small" data-move-prereq="up" data-index="' + i + '" ' + (i === 0 ? "disabled" : "") + '>↑</button>' +
+        '<button class="ghost small" data-move-prereq="down" data-index="' + i + '" ' + (i === c.prerequisites.length - 1 ? "disabled" : "") + '>↓</button>' +
+        '<div class="col"><input type="text" data-prereq-field="item" data-index="' + i + '" value="' + esc(p.item) + '" placeholder="Item"></div>' +
+        '<button class="danger small" data-remove-prereq="' + i + '">Remove</button>' +
+        '</div>' +
+        '<textarea data-prereq-field="detail" data-index="' + i + '" placeholder="Detail">' + esc(p.detail) + '</textarea>';
+      html += '<div style="margin-top:8px"><label>Skip for device types</label>';
+      c.deviceTypes.forEach(function (dt) {
+        var checked = p.skipForDeviceTypes && p.skipForDeviceTypes.indexOf(dt.id) !== -1;
+        html += '<label class="checkbox-inline"><input type="checkbox" data-skip-prereq-dt="' + esc(dt.id) + '" data-index="' + i + '" ' + (checked ? "checked" : "") + '> ' + esc(dt.label) + '</label>';
+      });
+      html += '</div></div>';
+    });
+    html += '<button id="btn-add-prereq" class="ghost small">+ Add Prerequisite</button></div>';
+
+    // Phases
+    html += '<div class="edit-section"><h2>Phases</h2>';
+    c.phases.forEach(function (phase, pi) {
+      html += renderPhaseEditor(phase, pi, c);
+    });
+    html += '<button id="btn-add-phase" class="ghost small">+ Add Phase</button></div>';
+
+    // Final checklist
+    html += '<div class="edit-section"><h2>Final Checklist</h2>';
+    c.finalChecklist.forEach(function (f, i) {
+      html += '<div class="edit-item-row">' +
+        '<div class="row-top">' +
+        '<button class="ghost small" data-move-final="up" data-index="' + i + '" ' + (i === 0 ? "disabled" : "") + '>↑</button>' +
+        '<button class="ghost small" data-move-final="down" data-index="' + i + '" ' + (i === c.finalChecklist.length - 1 ? "disabled" : "") + '>↓</button>' +
+        '<div class="col"><input type="text" data-final-field="text" data-index="' + i + '" value="' + esc(f.text) + '"></div>' +
+        '<button class="danger small" data-remove-final="' + i + '">Remove</button>' +
+        '</div>' +
+        '<label class="checkbox-inline"><input type="checkbox" data-final-requires-user="1" data-index="' + i + '" ' + (f.requiresUserInteraction ? "checked" : "") + '> Requires end user present (auto-skipped for Training PCs)</label>' +
+        '<label class="checkbox-inline"><input type="checkbox" data-final-skip-existing-user="1" data-index="' + i + '" ' + (f.skipForExistingUser ? "checked" : "") + '> Skip for Existing User sessions</label>' +
+        '<label class="checkbox-inline"><input type="checkbox" data-final-skip-laptop-only="1" data-index="' + i + '" ' + (f.skipForLaptopOnly ? "checked" : "") + '> Skip for Laptop-Only (No Peripherals) sessions</label>' +
+        '</div>';
+    });
+    html += '<button id="btn-add-final" class="ghost small">+ Add Item</button></div>';
+
+    html += "</div>";
+    return html;
+  }
+
+  function metaField(label, key, value) {
+    return '<div class="col"><label>' + esc(label) + '</label><input type="text" data-meta-field="' + key + '" value="' + esc(value) + '"></div>';
+  }
+
+  function renderPhaseEditor(phase, pi, c) {
+    var html = '<div class="edit-item-row phase-edit-row" draggable="true" data-phase-index="' + pi + '">';
+    html += '<div class="row-top">' +
+      '<span class="drag-handle" data-drag-phase="' + pi + '">⋮⋮</span>' +
+      '<div style="width:60px"><label>#</label><input type="number" data-phase-field="number" data-phase-index="' + pi + '" value="' + phase.number + '"></div>' +
+      '<div class="col"><label>Title</label><input type="text" data-phase-field="title" data-phase-index="' + pi + '" value="' + esc(phase.title) + '"></div>' +
+      '<button class="danger small" data-remove-phase="' + pi + '">Delete Phase</button>' +
+      '</div>';
+
+    html += '<div style="margin:8px 0"><label>Skip for device types</label>';
+    c.deviceTypes.forEach(function (dt) {
+      var checked = phase.skipForDeviceTypes && phase.skipForDeviceTypes.indexOf(dt.id) !== -1;
+      html += '<label class="checkbox-inline"><input type="checkbox" data-skip-dt="' + esc(dt.id) + '" data-phase-index="' + pi + '" ' + (checked ? "checked" : "") + '> ' + esc(dt.label) + '</label>';
+    });
+    html += '</div>';
+    html += '<label>Skip Note</label><textarea data-phase-field="skipNote" data-phase-index="' + pi + '">' + esc(phase.skipNote || "") + '</textarea>';
+    html += '<label class="checkbox-inline" style="margin-top:8px"><input type="checkbox" data-phase-requires-user="1" data-phase-index="' + pi + '" ' + (phase.requiresUserInteraction ? "checked" : "") + '> Requires end user present (auto-skipped for Training PCs)</label>';
+    html += '<label class="checkbox-inline" style="margin-top:8px"><input type="checkbox" data-phase-skip-existing-user="1" data-phase-index="' + pi + '" ' + (phase.skipForExistingUser ? "checked" : "") + '> Skip entire phase for Existing User sessions</label>';
+    html += '<label class="checkbox-inline" style="margin-top:8px"><input type="checkbox" data-phase-skip-laptop-only="1" data-phase-index="' + pi + '" ' + (phase.skipForLaptopOnly ? "checked" : "") + '> Skip entire phase for Laptop-Only (No Peripherals) sessions</label>';
+
+    html += '<div style="margin-top:10px"><label>Steps</label>';
+    phase.steps.forEach(function (step, si) {
+      html += '<div class="step-edit-block step-drag-row" draggable="true" data-step-index="' + si + '" data-step-phase-index="' + pi + '">';
+      html += '<div class="row-top">' +
+        '<span class="drag-handle" data-drag-step="' + si + '" data-drag-step-phase="' + pi + '">⋮⋮</span>' +
+        '<div class="col"><textarea data-step-field="text" data-phase-index="' + pi + '" data-step-index="' + si + '">' + esc(step.text) + '</textarea></div>' +
+        '<button class="danger small" data-remove-step="' + si + '" data-remove-step-phase="' + pi + '">Remove</button>' +
+        '</div>';
+      html += '<div class="field-inline"><label style="width:60px">Section</label><input type="text" data-step-field="section" data-phase-index="' + pi + '" data-step-index="' + si + '" value="' + esc(step.section || "") + '" placeholder="e.g. OneDrive (optional sub-heading)"></div>';
+      html += '<div class="field-inline"><label style="width:60px">Note</label><textarea data-step-field="note" data-phase-index="' + pi + '" data-step-index="' + si + '" placeholder="No note">' + esc(step.note || "") + '</textarea></div>';
+      html += '<div class="field-inline"><label style="width:60px">Warning</label><textarea data-step-field="warning" data-phase-index="' + pi + '" data-step-index="' + si + '" placeholder="No warning">' + esc(step.warning || "") + '</textarea></div>';
+      html += '<label class="checkbox-inline"><input type="checkbox" data-step-optional="1" data-phase-index="' + pi + '" data-step-index="' + si + '" ' + (step.optional ? "checked" : "") + '> Optional / if applicable (does not count toward totals)</label>';
+      html += '<label class="checkbox-inline"><input type="checkbox" data-step-skip-existing-user="1" data-phase-index="' + pi + '" data-step-index="' + si + '" ' + (step.skipForExistingUser ? "checked" : "") + '> Skip this step for Existing User sessions</label>';
+      html += '</div>';
+    });
+    html += '<button class="ghost small" data-add-step="' + pi + '">+ Add Step</button>';
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  // ---------------------------------------------------------------------
+  // Event binding
+  // ---------------------------------------------------------------------
+  function bindEvents() {
+    bindOptionsEvents();
+    bindCategoryEvents();
+    if (!config || !session) return;
+    if (mode === "deploy") bindDeployEvents(); else bindEditEvents();
+  }
+
+  function bindCategoryEvents() {
+    document.querySelectorAll("[data-select-category]").forEach(function (el) {
+      el.addEventListener("click", function () { selectCategory(el.dataset.selectCategory); });
+    });
+    on("btn-back-to-category", "click", backToCategoryMenu);
+    on("btn-change-category", "click", backToCategoryMenu);
+  }
+
+  function selectCategory(catId) {
+    activeCategory = catId;
+    saveActiveCategory();
+    var def = DEVICE_CATEGORIES.find(function (c) { return c.id === catId; });
+    if (def && def.functional && CATEGORY_STORAGE[catId]) {
+      config = loadConfig(catId);
+      session = loadSession(catId);
+      history = loadHistory(catId);
+    } else {
+      config = null;
+      session = null;
+    }
+    mode = "deploy";
+    collapsedPhases = {};
+    renderApp();
+  }
+
+  function backToCategoryMenu() {
+    activeCategory = null;
+    saveActiveCategory();
+    renderApp();
+  }
+
+  function bindOptionsEvents() {
+    on("btn-options-toggle", "click", function (e) {
+      e.stopPropagation();
+      optionsOpen = !optionsOpen;
+      renderApp();
+    });
+    document.querySelectorAll("[data-theme-choice]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        setTheme(el.dataset.themeChoice);
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-censor-choice]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        setCensor(el.dataset.censorChoice === "on");
+        renderApp();
+      });
+    });
+    on("btn-edit-mode", "click", enterEditMode);
+  }
+
+  function bindDeployEvents() {
+    document.querySelectorAll("[data-field]").forEach(function (el) {
+      var transform = el.dataset.transform;
+      if (transform) {
+        el.addEventListener("input", function () { applyFieldTransform(el, transform); });
+      }
+      el.addEventListener("change", function () {
+        if (transform) applyFieldTransform(el, transform);
+        session[el.dataset.field] = el.value;
+        var tagChanged = el.dataset.field === "user" && applyIpadAssetTagDefault();
+        saveSession();
+        if (tagChanged) { renderApp(); return; }
+        renderFooter();
+      });
+    });
+    document.querySelectorAll("[data-devicetype]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var id = el.dataset.devicetype;
+        session.deviceType = session.deviceType === id ? null : id;
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-training-pc]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        session.trainingPC = !session.trainingPC;
+        if (session.trainingPC) {
+          session.user = "Training PC";
+        } else if (session.user === "Training PC") {
+          session.user = "";
+        }
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-existing-user]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        session.existingUser = !session.existingUser;
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-laptop-only]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        session.laptopOnly = !session.laptopOnly;
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-phys-none]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        session.physConditionNone = el.checked;
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-toggle-phase]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var id = el.dataset.togglePhase;
+        var phase = config.phases.find(function (p) { return p.id === id; });
+        if (isPhaseSkipped(phase)) return;
+        var currentlyCollapsed = collapsedPhases[id] !== undefined ? collapsedPhases[id] : isPhaseComplete(phase);
+        collapsedPhases[id] = !currentlyCollapsed;
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-prereq]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        touchStartTime();
+        session.prereqChecked[el.dataset.prereq] = el.checked;
+        var applicablePrereqs = config.prerequisites.filter(function (p) { return !isPrereqSkipped(p); });
+        var allDone = applicablePrereqs.length > 0 && applicablePrereqs.every(function (p) { return session.prereqChecked[p.id]; });
+        if (allDone) collapsedPhases["prereqs"] = true;
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-step]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        touchStartTime();
+        var stepId = el.dataset.step;
+        var phaseId = el.dataset.phaseOfStep;
+        session.checkedSteps[stepId] = el.checked;
+        var phase = config.phases.find(function (p) { return p.id === phaseId; });
+        if (phase && isPhaseComplete(phase)) collapsedPhases[phaseId] = true;
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-final]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        touchStartTime();
+        session.finalChecked[el.dataset.final] = el.checked;
+        saveSession();
+        renderApp();
+      });
+    });
+    var markAll = document.getElementById("btn-mark-all-final");
+    if (markAll) markAll.addEventListener("click", function () {
+      if (!confirmMarkAll()) return;
+      touchStartTime();
+      config.finalChecklist.forEach(function (f) { if (!isFinalItemSkipped(f)) session.finalChecked[f.id] = true; });
+      saveSession();
+      renderApp();
+    });
+    document.querySelectorAll("[data-mark-all-prereq]").forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!confirmMarkAll()) return;
+        touchStartTime();
+        config.prerequisites.forEach(function (p) { if (!isPrereqSkipped(p)) session.prereqChecked[p.id] = true; });
+        collapsedPhases["prereqs"] = true;
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-toggle-prereqs]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var applicablePrereqs = config.prerequisites.filter(function (p) { return !isPrereqSkipped(p); });
+        var doneCount = applicablePrereqs.filter(function (p) { return session.prereqChecked[p.id]; }).length;
+        var allDone = applicablePrereqs.length > 0 && doneCount === applicablePrereqs.length;
+        var currentlyCollapsed = collapsedPhases["prereqs"] !== undefined ? collapsedPhases["prereqs"] : allDone;
+        collapsedPhases["prereqs"] = !currentlyCollapsed;
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-mark-all-phase]").forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!confirmMarkAll()) return;
+        touchStartTime();
+        var phase = config.phases.find(function (p) { return p.id === el.dataset.markAllPhase; });
+        phase.steps.forEach(function (s) { session.checkedSteps[s.id] = true; });
+        collapsedPhases[phase.id] = true;
+        saveSession();
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-toggle-skip-section]").forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var key = sectionKey(el.dataset.sectionPhase, el.dataset.sectionName);
+        session.manualSkippedSections[key] = !session.manualSkippedSections[key];
+        touchStartTime();
+        saveSession();
+        renderApp();
+      });
+    });
+
+    on("btn-print", "click", handlePrint);
+    on("btn-export-session", "click", handleExportSession);
+    on("btn-history", "click", openHistoryModal);
+    on("btn-new-session", "click", handleNewSession);
+  }
+
+  function bindEditEvents() {
+    var c = draftConfig;
+    document.querySelectorAll("[data-meta-field]").forEach(function (el) {
+      el.addEventListener("input", function () { c.meta[el.dataset.metaField] = el.value; });
+    });
+
+    // Device types
+    document.querySelectorAll("[data-dt-field]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        c.deviceTypes[+el.dataset.dtIndex][el.dataset.dtField] = el.value;
+      });
+    });
+    document.querySelectorAll("[data-remove-dt]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var idx = +el.dataset.removeDt;
+        var removedId = c.deviceTypes[idx].id;
+        if (!confirm("Remove this device type? Phases referencing it will no longer skip for it.")) return;
+        c.deviceTypes.splice(idx, 1);
+        c.phases.forEach(function (p) {
+          p.skipForDeviceTypes = (p.skipForDeviceTypes || []).filter(function (id) { return id !== removedId; });
+        });
+        c.prerequisites.forEach(function (p) {
+          p.skipForDeviceTypes = (p.skipForDeviceTypes || []).filter(function (id) { return id !== removedId; });
+        });
+        renderApp();
+      });
+    });
+    on("btn-add-devicetype", "click", function () {
+      c.deviceTypes.push({ id: uid("dt"), label: "New Device Type", description: "" });
+      renderApp();
+    });
+
+    // Prerequisites
+    document.querySelectorAll("[data-prereq-field]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        c.prerequisites[+el.dataset.index][el.dataset.prereqField] = el.value;
+      });
+    });
+    document.querySelectorAll("[data-remove-prereq]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        c.prerequisites.splice(+el.dataset.removePrereq, 1);
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-move-prereq]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        moveArrayItem(c.prerequisites, +el.dataset.index, el.dataset.movePrereq === "up" ? -1 : 1);
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-skip-prereq-dt]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        var i = +el.dataset.index, id = el.dataset.skipPrereqDt;
+        var p = c.prerequisites[i];
+        p.skipForDeviceTypes = p.skipForDeviceTypes || [];
+        var idx = p.skipForDeviceTypes.indexOf(id);
+        if (el.checked && idx === -1) p.skipForDeviceTypes.push(id);
+        if (!el.checked && idx !== -1) p.skipForDeviceTypes.splice(idx, 1);
+      });
+    });
+    on("btn-add-prereq", "click", function () {
+      c.prerequisites.push({ id: uid("pre"), item: "New Item", detail: "", skipForDeviceTypes: [] });
+      renderApp();
+    });
+
+    // Phases
+    document.querySelectorAll("[data-phase-field]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        var pi = +el.dataset.phaseIndex, f = el.dataset.phaseField;
+        c.phases[pi][f] = f === "number" ? (+el.value || 0) : el.value;
+      });
+    });
+    document.querySelectorAll("[data-skip-dt]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        var pi = +el.dataset.phaseIndex, id = el.dataset.skipDt;
+        var phase = c.phases[pi];
+        phase.skipForDeviceTypes = phase.skipForDeviceTypes || [];
+        var idx = phase.skipForDeviceTypes.indexOf(id);
+        if (el.checked && idx === -1) phase.skipForDeviceTypes.push(id);
+        if (!el.checked && idx !== -1) phase.skipForDeviceTypes.splice(idx, 1);
+      });
+    });
+    document.querySelectorAll("[data-phase-requires-user]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        c.phases[+el.dataset.phaseIndex].requiresUserInteraction = el.checked;
+      });
+    });
+    document.querySelectorAll("[data-phase-skip-existing-user]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        c.phases[+el.dataset.phaseIndex].skipForExistingUser = el.checked;
+      });
+    });
+    document.querySelectorAll("[data-phase-skip-laptop-only]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        c.phases[+el.dataset.phaseIndex].skipForLaptopOnly = el.checked;
+      });
+    });
+    document.querySelectorAll("[data-remove-phase]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        if (!confirm("Delete this phase and all its steps? This cannot be undone.")) return;
+        c.phases.splice(+el.dataset.removePhase, 1);
+        renderApp();
+      });
+    });
+    on("btn-add-phase", "click", function () {
+      var nextNum = c.phases.length ? Math.max.apply(null, c.phases.map(function (p) { return p.number; })) + 1 : 1;
+      c.phases.push({ id: uid("phase"), number: nextNum, title: "New Phase", skipForDeviceTypes: [], skipNote: "", requiresUserInteraction: false, skipForExistingUser: false, skipForLaptopOnly: false, steps: [] });
+      renderApp();
+    });
+
+    // Steps
+    document.querySelectorAll("[data-step-field]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        var pi = +el.dataset.phaseIndex, si = +el.dataset.stepIndex, f = el.dataset.stepField;
+        var val = el.value;
+        c.phases[pi].steps[si][f] = (f === "note" || f === "warning") && val === "" ? null : val;
+      });
+    });
+    document.querySelectorAll("[data-remove-step]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var pi = +el.dataset.removeStepPhase, si = +el.dataset.removeStep;
+        c.phases[pi].steps.splice(si, 1);
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-step-optional]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        var pi = +el.dataset.phaseIndex, si = +el.dataset.stepIndex;
+        c.phases[pi].steps[si].optional = el.checked;
+      });
+    });
+    document.querySelectorAll("[data-step-skip-existing-user]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        var pi = +el.dataset.phaseIndex, si = +el.dataset.stepIndex;
+        c.phases[pi].steps[si].skipForExistingUser = el.checked;
+      });
+    });
+    document.querySelectorAll("[data-add-step]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var pi = +el.dataset.addStep;
+        c.phases[pi].steps.push({ id: uid("step"), text: "New step", note: null, warning: null, optional: false, skipForExistingUser: false });
+        renderApp();
+      });
+    });
+
+    // Final checklist
+    document.querySelectorAll("[data-final-field]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        c.finalChecklist[+el.dataset.index][el.dataset.finalField] = el.value;
+      });
+    });
+    document.querySelectorAll("[data-remove-final]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        c.finalChecklist.splice(+el.dataset.removeFinal, 1);
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-move-final]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        moveArrayItem(c.finalChecklist, +el.dataset.index, el.dataset.moveFinal === "up" ? -1 : 1);
+        renderApp();
+      });
+    });
+    document.querySelectorAll("[data-final-requires-user]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        c.finalChecklist[+el.dataset.index].requiresUserInteraction = el.checked;
+      });
+    });
+    document.querySelectorAll("[data-final-skip-existing-user]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        c.finalChecklist[+el.dataset.index].skipForExistingUser = el.checked;
+      });
+    });
+    document.querySelectorAll("[data-final-skip-laptop-only]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        c.finalChecklist[+el.dataset.index].skipForLaptopOnly = el.checked;
+      });
+    });
+    on("btn-add-final", "click", function () {
+      c.finalChecklist.push({ id: uid("fc"), text: "New checklist item", requiresUserInteraction: false, skipForExistingUser: false, skipForLaptopOnly: false });
+      renderApp();
+    });
+
+    // Drag/drop reordering for phases and steps
+    bindPhaseDragReorder(c);
+    bindStepDragReorder(c);
+
+    on("btn-edit-save", "click", function () {
+      config = draftConfig;
+      saveConfig();
+      draftConfig = null;
+      mode = "deploy";
+      renderApp();
+    });
+    on("btn-edit-discard", "click", function () {
+      if (!confirm("Discard all changes made in Edit Mode?")) return;
+      draftConfig = null;
+      mode = "deploy";
+      renderApp();
+    });
+    on("btn-export-config", "click", function () {
+      downloadJson(draftConfig, "deployment-checklist-config.json");
+    });
+    on("btn-reset-default", "click", function () {
+      if (!confirm("Reset the checklist to the original " + config.meta.sop + " defaults? All customizations will be lost.")) return;
+      draftConfig = CATEGORY_STORAGE[activeCategory].getDefaultConfig();
+      renderApp();
+    });
+    var importInput = document.getElementById("input-import-config");
+    if (importInput) importInput.addEventListener("change", function (e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var parsed = JSON.parse(reader.result);
+          if (!parsed.meta || !parsed.phases) throw new Error("Missing required fields");
+          parsed.deviceTypes = parsed.deviceTypes || [];
+          parsed.prerequisites = parsed.prerequisites || [];
+          parsed.finalChecklist = parsed.finalChecklist || [];
+          parsed.prerequisites.forEach(function (p) {
+            p.skipForDeviceTypes = p.skipForDeviceTypes || [];
+          });
+          parsed.phases.forEach(function (p) {
+            p.steps = p.steps || [];
+            p.skipForDeviceTypes = p.skipForDeviceTypes || [];
+            p.requiresUserInteraction = !!p.requiresUserInteraction;
+            p.steps.forEach(function (s) { s.optional = !!s.optional; });
+          });
+          parsed.finalChecklist.forEach(function (f) {
+            f.requiresUserInteraction = !!f.requiresUserInteraction;
+          });
+          if (!confirm("Import this configuration? It will replace the current draft.")) return;
+          draftConfig = parsed;
+          renderApp();
+        } catch (err) {
+          alert("Could not import file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  function moveArrayItem(arr, index, delta) {
+    var newIndex = index + delta;
+    if (newIndex < 0 || newIndex >= arr.length) return;
+    var tmp = arr[index]; arr[index] = arr[newIndex]; arr[newIndex] = tmp;
+  }
+  function moveArrayItemTo(arr, fromIdx, toIdx) {
+    if (toIdx < 0 || toIdx >= arr.length) return;
+    var item = arr.splice(fromIdx, 1)[0];
+    arr.splice(toIdx, 0, item);
+  }
+  function bindPhaseDragReorder(c) {
+    var container = document.getElementById("edit-view");
+    if (!container) return;
+    var dragFrom = null;
+    container.querySelectorAll(".phase-edit-row").forEach(function (el) {
+      el.addEventListener("dragstart", function (e) {
+        dragFrom = +el.dataset.phaseIndex;
+        e.stopPropagation();
+        el.style.opacity = "0.5";
+      });
+      el.addEventListener("dragend", function () { el.style.opacity = ""; });
+      el.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); });
+      el.addEventListener("drop", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var to = +el.dataset.phaseIndex;
+        if (dragFrom !== null && to !== dragFrom) {
+          moveArrayItemTo(c.phases, dragFrom, to);
+          renderApp();
+        }
+        dragFrom = null;
+      });
+    });
+  }
+
+  function bindStepDragReorder(c) {
+    var container = document.getElementById("edit-view");
+    if (!container) return;
+    var dragFrom = null; // { phase, index }
+    container.querySelectorAll(".step-drag-row").forEach(function (el) {
+      el.addEventListener("dragstart", function (e) {
+        dragFrom = { phase: +el.dataset.stepPhaseIndex, index: +el.dataset.stepIndex };
+        e.stopPropagation();
+        el.style.opacity = "0.5";
+      });
+      el.addEventListener("dragend", function () { el.style.opacity = ""; });
+      el.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); });
+      el.addEventListener("drop", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var toPhase = +el.dataset.stepPhaseIndex;
+        var toIndex = +el.dataset.stepIndex;
+        if (dragFrom && dragFrom.phase === toPhase && dragFrom.index !== toIndex) {
+          moveArrayItemTo(c.phases[toPhase].steps, dragFrom.index, toIndex);
+          renderApp();
+        }
+        dragFrom = null;
+      });
+    });
+  }
+
+  function on(id, evt, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener(evt, fn);
+  }
+
+  // ---------------------------------------------------------------------
+  // Mode transitions
+  // ---------------------------------------------------------------------
+  function enterEditMode() {
+    if (!confirm("Switching to Edit Mode will save your current session progress. Continue?")) return;
+    saveSession();
+    draftConfig = deepClone(config);
+    mode = "edit";
+    renderApp();
+  }
+
+  // ---------------------------------------------------------------------
+  // Session actions
+  // ---------------------------------------------------------------------
+  function handleNewSession() {
+    if (!confirm("Start a new deployment session? Current progress will be saved.")) return;
+    saveSession();
+    session = newSession();
+    collapsedPhases = {};
+    saveSession();
+    activeCategory = null;
+    saveActiveCategory();
+    renderApp();
+  }
+
+  function handleExportSession() {
+    downloadJson({ config: config, session: session }, "deployment-session-" + session.date + ".json");
+  }
+
+  // ---------------------------------------------------------------------
+  // History modal
+  // ---------------------------------------------------------------------
+  function openHistoryModal() {
+    var root = document.getElementById("modal-root");
+    var rows = history.length ? history.map(function (h, i) {
+      return '<tr>' +
+        '<td>' + esc(cen(h.date)) + '</td>' +
+        '<td>' + esc(cen(h.technician) || "—") + '</td>' +
+        '<td>' + esc(cen(h.user) || "—") + '</td>' +
+        '<td>' + esc(cen(h.device) || "—") + '</td>' +
+        '<td>' + h.completion + '%</td>' +
+        '<td style="white-space:nowrap"><button class="small" data-view-hist="' + i + '">View</button> ' +
+        '<button class="small" data-export-hist="' + i + '">Export</button> ' +
+        '<button class="small" data-print-hist="' + i + '">Print</button></td>' +
+        '</tr>';
+    }).join("") : '<tr><td colspan="6" class="empty-msg">No session history yet.</td></tr>';
+
+    root.innerHTML = '<div class="modal-overlay" id="modal-overlay">' +
+      '<div class="modal-box"><h2>Session History</h2>' +
+      '<table class="hist-table"><thead><tr><th>Date</th><th>Tech</th><th>User</th><th>Device</th><th>Complete</th><th>Actions</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>' +
+      '<div class="modal-actions"><button id="modal-close" class="ghost">Close</button></div>' +
+      '</div></div>';
+
+    on("modal-overlay", "click", function (e) { if (e.target.id === "modal-overlay") closeModal(); });
+    on("modal-close", "click", closeModal);
+    document.querySelectorAll("[data-view-hist]").forEach(function (el) {
+      el.addEventListener("click", function () { viewHistorySession(history[+el.dataset.viewHist]); });
+    });
+    document.querySelectorAll("[data-export-hist]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var h = history[+el.dataset.exportHist];
+        downloadJson(h.snapshot, "deployment-session-" + h.date + ".json");
+      });
+    });
+    document.querySelectorAll("[data-print-hist]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var h = history[+el.dataset.printHist];
+        buildPrintView(h.snapshot.config, h.snapshot.session);
+        if (exportsToTracker() && !exportForTracker(h.snapshot.config, h.snapshot.session)) return;
+        closeModal();
+        window.print();
+      });
+    });
+  }
+
+  function viewHistorySession(record) {
+    var root = document.getElementById("modal-root");
+    var c = record.snapshot.config, s = record.snapshot.session;
+    var prog = computeProgress(s);
+    var html = '<div class="modal-overlay" id="modal-overlay"><div class="modal-box">' +
+      '<h2>Read-Only Session — ' + esc(cen(s.date)) + '</h2>' +
+      '<p style="font-size:13px;color:var(--muted)">Technician: ' + esc(cen(s.technician) || "—") + ' &middot; User: ' + esc(cen(s.user) || "—") + ' &middot; Device: ' + esc(cen(s.device) || "—") + '</p>' +
+      '<p style="font-size:13px;color:var(--muted)">' + prog.phasesComplete + '/' + prog.totalPhases + ' phases complete, ' + prog.checkedSteps + '/' + prog.totalSteps + ' steps checked</p>';
+    c.phases.forEach(function (phase) {
+      var skipped = isPhaseSkipped(phase, s);
+      html += '<div style="margin-bottom:10px"><strong>Phase ' + phase.number + ': ' + esc(phase.title) + '</strong>' + (skipped ? ' <span class="badge badge-skip">Skip</span>' : '') + '</div>';
+      if (!skipped) {
+        phase.steps.forEach(function (step) {
+          var checked = !!s.checkedSteps[step.id];
+          html += '<div style="font-size:13px;margin-left:12px">' + (checked ? "☑" : "☐") + " " + esc(step.text) + '</div>';
+        });
+      }
+    });
+    html += '<div class="modal-actions"><button id="modal-close" class="ghost">Close</button></div></div></div>';
+    root.innerHTML = html;
+    on("modal-overlay", "click", function (e) { if (e.target.id === "modal-overlay") closeModal(); });
+    on("modal-close", "click", closeModal);
+  }
+
+  function closeModal() { document.getElementById("modal-root").innerHTML = ""; }
+
+  // ---------------------------------------------------------------------
+  // Print
+  // ---------------------------------------------------------------------
+  function handlePrint() {
+    buildPrintView(config, session, Date.now());
+    // Laptops emit the tracker JSON alongside the printout. If the record
+    // can't be named yet, stop the whole flow so the technician fixes the
+    // fields rather than getting a printout with no matching export.
+    if (exportsToTracker() && !exportForTracker(config, session)) return;
+    window.print();
+  }
+
+  // ---------------------------------------------------------------------
+  // Export for Deployment Tracker import
+  // ---------------------------------------------------------------------
+  function buildTrackerExport(c, s) {
+    c = c || config; s = s || session;
+    var prog = computeProgress(s);
+    var finalComplete = c.finalChecklist.length > 0 && c.finalChecklist.every(function (f) { return !!s.finalChecked[f.id]; });
+    var startedIso = s.startTime ? new Date(s.startTime).toISOString() : new Date(s.date + "T00:00:00").toISOString();
+    return {
+      source: "mli-deployment-checklist",
+      exportVersion: 2,
+      exportedAt: new Date().toISOString(),
+      deviceCategory: activeCategory,
+      device: {
+        assetTag: (s.assetTag || s.device || "").toUpperCase(),
+        serialNumber: (s.device || "").toUpperCase(),
+        model: s.model || "",
+        assignedUser: s.user || "",
+        primaryLocation: "",
+        technician: s.technician || "",
+        deploymentType: s.deviceType === "retail" ? "autopilot" : "manual-install",
+        dateStarted: startedIso,
+        dateCompleted: finalComplete ? new Date().toISOString() : null,
+        deviceNotes: "Imported from Deployment Checklist (" + c.meta.sop + "). " +
+          prog.checkedSteps + "/" + prog.totalSteps + " steps checked across " + prog.phasesComplete + "/" + prog.totalPhases + " phases complete." +
+          (s.physConditionNone ? "\n\nPhysical condition: No pre-existing damage observed." :
+            s.physConditionNotes ? "\n\nPhysical condition — pre-existing damage: " + s.physConditionNotes : "") +
+          (s.notes ? "\n\nTechnician notes: " + s.notes : "")
+      },
+      phases: c.phases.map(function (p) {
+        return {
+          title: p.title,
+          skipped: isPhaseSkipped(p, s),
+          complete: isPhaseComplete(p, s),
+          requiresUserInteraction: !!p.requiresUserInteraction,
+          steps: p.steps.map(function (st) {
+            return { text: st.text, section: st.section || null, optional: !!st.optional, checked: !!s.checkedSteps[st.id] };
+          })
+        };
+      }),
+      prerequisites: c.prerequisites.map(function (p) {
+        return { item: p.item, detail: p.detail, skipped: isPrereqSkipped(p, s), checked: !!s.prereqChecked[p.id] };
+      }),
+      finalChecklist: c.finalChecklist.map(function (f) {
+        return { text: f.text, checked: !!s.finalChecked[f.id], requiresUserInteraction: !!f.requiresUserInteraction };
+      })
+    };
+  }
+
+  // Returns false (and tells the technician why) when the record isn't
+  // complete enough to build the filename from.
+  function exportForTracker(c, s) {
+    c = c || config; s = s || session;
+    var en = exportName(s.user, s.device, s.trainingPC);
+    if (!en.ok) {
+      alert("Cannot export the tracker JSON yet."
+        + "\n\nThe filename is built from the user's name and the device serial."
+        + "\nComplete these first:\n\n• "
+        + en.problems.join("\n• "));
+      return false;
+    }
+    downloadJson(buildTrackerExport(c, s), en.name + ".json");
+    return true;
+  }
+
+  function buildPrintView(c, s, asOf) {
+    asOf = asOf || s.lastUpdated || Date.now();
+    var prog = computeProgress(s);
+    var html = '<div class="p-header"><h1>' + esc(c.meta.title) + '</h1>' +
+      '<div class="p-meta">' + esc(c.meta.subtitle) + ' &middot; ' + esc(c.meta.sop) + ' &middot; Revised ' + esc(c.meta.revised) + '</div>' +
+      '<div class="p-meta">Technician: ' + esc(cen(s.technician) || "—") + ' &middot; User: ' + esc(cen(s.user) || "—") + ' &middot; SN: ' + esc(cen(s.device) || "—") + ' &middot; Asset Tag: ' + esc(cen(s.assetTag) || "—") + ' &middot; Model: ' + esc(cen(s.model) || "—") + ' &middot; Date: ' + esc(cen(s.date)) + '</div>' +
+      '<div class="p-meta">Phases complete: ' + prog.phasesComplete + '/' + prog.totalPhases + ' &middot; Steps checked: ' + prog.checkedSteps + '/' + prog.totalSteps + '</div>' +
+      '</div>';
+
+    html += '<div class="p-phase"><strong>Prerequisites</strong>';
+    c.prerequisites.forEach(function (p) {
+      var skipped = isPrereqSkipped(p, s);
+      var checked = !!s.prereqChecked[p.id];
+      html += '<div class="p-step' + (skipped ? " p-skip" : "") + '">' + (skipped ? "—" : (checked ? "☑" : "☐")) + " " + esc(p.item) + " — " + esc(p.detail) + (skipped ? " (N/A)" : "") + '</div>';
+    });
+    html += '</div>';
+
+    if (c.deviceTypes && c.deviceTypes.length) {
+      html += '<div class="p-phase"><strong>Physical Condition</strong>';
+      if (s.deviceType === "retail") {
+        html += '<div class="p-step p-skip">— Skipped (Fresh from Retail — no pre-existing damage expected)</div>';
+      } else if (s.physConditionNone) {
+        html += '<div class="p-step">☑ No pre-existing damage observed</div>';
+      } else if (s.physConditionNotes) {
+        html += '<div class="p-step">☑ Damage documented:</div><div class="p-note">' + esc(cen(s.physConditionNotes, CENSOR_BLOCK_LONG)) + '</div>';
+      } else if (s.deviceType === "refresh") {
+        html += '<div class="p-step p-skip">☐ Not documented — required for Refresh / Redeployed devices</div>';
+      } else {
+        html += '<div class="p-step p-skip">— Not documented (optional for this device type)</div>';
+      }
+      html += '</div>';
+    }
+
+    var handoffPrinted = false;
+    c.phases.forEach(function (phase) {
+      if (!handoffPrinted && phase.requiresUserInteraction) {
+        html += '<div class="p-handoff-divider">Device Handoff<span class="p-handoff-sub">Complete at the user\'s desk — the build above is done.</span></div>';
+        handoffPrinted = true;
+      }
+      var skipped = isPhaseSkipped(phase, s);
+      var trainingSkipped = !!(s.trainingPC && phase.requiresUserInteraction);
+      var existingUserSkipped = !!(s.existingUser && phase.skipForExistingUser);
+      var laptopOnlySkipped = !!(s.laptopOnly && phase.skipForLaptopOnly);
+      html += '<div class="p-phase"><h3>Phase ' + phase.number + ': ' + esc(phase.title) + (skipped ? " — SKIPPED" : "") + '</h3>';
+      if (skipped) {
+        var skipMsg = trainingSkipped ? "Skipped — training PC, no assigned end user." :
+          existingUserSkipped ? "Skipped — marked as an Existing User session." :
+          laptopOnlySkipped ? "Skipped — marked as a Laptop-Only (No Peripherals) session." : (phase.skipNote || "");
+        html += '<div class="p-skip">' + esc(skipMsg) + '</div>';
+      } else {
+        var lastSection = null;
+        phase.steps.forEach(function (step) {
+          var secSkipped = isStepSectionSkipped(phase.id, step, s);
+          if (step.section && step.section !== lastSection) {
+            var sectionHeaderSkipped = isSectionSkipped(phase.id, step.section, s) || isSectionAutoSkippedForExistingUser(phase, step.section, s);
+            html += '<div class="p-step"><em>' + esc(step.section) + (sectionHeaderSkipped ? " — SKIPPED" : "") + '</em></div>';
+            lastSection = step.section;
+          }
+          var checked = !!s.checkedSteps[step.id];
+          html += '<div class="p-step' + (secSkipped ? " p-skip" : "") + '">' + (secSkipped ? "—" : (checked ? "☑" : "☐")) + " " + esc(step.text) + (step.optional ? " (if applicable)" : "") + '</div>';
+          if (!secSkipped && step.note) html += '<div class="p-note">Note: ' + esc(step.note) + '</div>';
+          if (!secSkipped && step.warning) html += '<div class="p-note">⚠ Warning: ' + esc(step.warning) + '</div>';
+        });
+      }
+      html += '</div>';
+    });
+
+    html += '<div class="p-phase"><h3>Final Checklist</h3>';
+    c.finalChecklist.forEach(function (f) {
+      var skipped = isFinalItemSkipped(f, s);
+      var checked = !!s.finalChecked[f.id];
+      html += '<div class="p-step' + (skipped ? " p-skip" : "") + '">' + (skipped ? "—" : (checked ? "☑" : "☐")) + " " + esc(f.text) + (skipped ? " (N/A — training PC)" : "") + '</div>';
+    });
+    html += '</div>';
+
+    html += '<div class="p-signatures">' +
+      '<div class="p-sig-attest">By signing below, both parties confirm they have reviewed this checklist and are aware of the current state, configuration, and condition of this device, including all changes made during this deployment.</div>' +
+      '<div class="p-sig-row">' +
+      '<div class="p-sig-block"><div class="p-sig-line"></div><div class="p-sig-label">Technician Signature</div><div class="p-sig-line p-sig-line-date"></div><div class="p-sig-label">Date</div></div>' +
+      '<div class="p-sig-block"><div class="p-sig-line"></div><div class="p-sig-label">User Signature</div><div class="p-sig-line p-sig-line-date"></div><div class="p-sig-label">Date</div></div>' +
+      '</div></div>';
+
+    if (s.notes) {
+      html += '<div class="p-notes"><div class="p-notes-label">Notes</div><div class="p-notes-body">' + esc(cen(s.notes, CENSOR_BLOCK_LONG)) + '</div></div>';
+    }
+
+    html += '<div class="p-footer">' + esc("McKenna Labs IT") + ' &middot; ' + esc(c.meta.sop) + ' &middot; Generated ' + esc(cen(todayStr())) + '</div>';
+
+    document.getElementById("print-view").innerHTML = html;
+  }
+
+  // ---------------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------------
+  function init() {
+    applyTheme();
+    renderApp();
+    document.addEventListener("keydown", function (e) {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      if (String(e.key).toLowerCase() !== "c") return;
+      var t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      e.preventDefault();
+      setCensor(!uiState.censor);
+      renderApp();
+    });
+    document.addEventListener("click", function (e) {
+      if (!optionsOpen) return;
+      var wrap = document.getElementById("options-wrap");
+      if (wrap && !wrap.contains(e.target)) {
+        optionsOpen = false;
+        renderApp();
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>
