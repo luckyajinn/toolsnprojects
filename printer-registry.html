@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Printer Registry</title>
+<style>
+/* Layout concept: an equipment-register board. Dense sortable table with a severity stripe per row,
+   a slide-over drawer for each record, and a flag column that surfaces drift (duplicate IPs, off-standard DNS, failed scan tests). */
+:root{
+  color-scheme:light;
+  --bg:#f1f4f7; --surface:#ffffff; --surface-2:#e8edf2; --hover:#f0f4f7; --line:#d2dae2;
+  --fg:#16202a; --fg-2:#46566a; --fg-3:#667587;
+  --accent:#0a6c74; --accent-fg:#ffffff; --accent-soft:#d9eeef;
+  --good:#1b7a43; --good-soft:#dbf0e2;
+  --warn:#8a5700; --warn-soft:#fbeac4;
+  --bad:#b3261e; --bad-soft:#f9dcd9;
+  --idle:#56636f; --idle-soft:#e3e8ed;
+  --font-display:'Barlow Semi Condensed','Barlow','Arial Narrow','Liberation Sans Narrow','Segoe UI',system-ui,sans-serif;
+  --font-body:'Barlow','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,Consolas,'Courier New',monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161b; --surface:#19212a; --surface-2:#222c37; --hover:#202a34; --line:#303c49;
+    --fg:#e6ecf1; --fg-2:#aab6c3; --fg-3:#8795a3;
+    --accent:#4fc1c8; --accent-fg:#06262a; --accent-soft:#17383c;
+    --good:#5fcf8e; --good-soft:#173a29;
+    --warn:#f0bf5a; --warn-soft:#3c2f10;
+    --bad:#ff8c82; --bad-soft:#44201d;
+    --idle:#9ba8b4; --idle-soft:#27323d;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10161b; --surface:#19212a; --surface-2:#222c37; --hover:#202a34; --line:#303c49;
+  --fg:#e6ecf1; --fg-2:#aab6c3; --fg-3:#8795a3;
+  --accent:#4fc1c8; --accent-fg:#06262a; --accent-soft:#17383c;
+  --good:#5fcf8e; --good-soft:#173a29;
+  --warn:#f0bf5a; --warn-soft:#3c2f10;
+  --bad:#ff8c82; --bad-soft:#44201d;
+  --idle:#9ba8b4; --idle-soft:#27323d;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--font-body);padding-inline:clamp(16px,3vw,32px);padding-block:22px 48px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums}
+.muted{color:var(--fg-3)}
+
+.top{display:flex;flex-wrap:wrap;gap:14px 24px;justify-content:space-between;align-items:flex-end}
+h1{margin:0;font:700 31px/1.05 var(--font-display);letter-spacing:.01em}
+.sub{margin:6px 0 0;color:var(--fg-2)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn[disabled]{opacity:.55;cursor:default}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-block:20px 12px}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-weight:600;cursor:pointer}
+.chip b{font:500 13px var(--font-mono);color:var(--fg-2)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.chip[aria-pressed="true"] b{color:var(--fg)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.toolbar input,.toolbar select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 10px;min-width:0}
+.toolbar input{flex:1 1 260px}
+.toolbar select{flex:0 1 180px}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{width:100%;min-width:1040px;border-collapse:separate;border-spacing:0}
+th{text-align:left;font:600 12px var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-2);background:var(--surface-2);padding:10px 12px;white-space:nowrap}
+th button{all:unset;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+th button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+th button .arr{font-size:10px;color:var(--accent)}
+td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top;min-width:0}
+tbody tr{cursor:pointer;--stripe:var(--idle)}
+tbody tr:hover td{background:var(--hover)}
+tbody tr td:first-child{box-shadow:inset 4px 0 0 var(--stripe)}
+tr.s-good{--stripe:var(--good)} tr.s-warn{--stripe:var(--warn)} tr.s-bad{--stripe:var(--bad)} tr.s-idle{--stripe:var(--idle)}
+[hidden]{display:none!important}
+td .mono{white-space:nowrap}
+.rowbtn{all:unset;cursor:pointer;font-weight:600;font-size:15px;color:var(--fg);white-space:nowrap}
+.rowbtn:hover{text-decoration:underline;text-underline-offset:3px}
+.rowbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stack{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.stack .dim{color:var(--fg-2)}
+a.ip{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--accent);text-decoration:underline;text-underline-offset:3px;font-variant-numeric:tabular-nums}
+.ip.badip{color:var(--bad);font-family:var(--font-mono);font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:4px;font:600 12px var(--font-body);white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.good{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.idle{background:var(--idle-soft);color:var(--idle)}
+.flag{display:inline-block;margin:0 4px 4px 0;padding:1px 7px;border-radius:4px;font:600 12px var(--font-body)}
+.flag.bad{background:var(--bad-soft);color:var(--bad)} .flag.warn{background:var(--warn-soft);color:var(--warn)}
+.scanline{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px}
+
+.empty{padding:44px 16px;text-align:center;color:var(--fg-2)}
+.empty h2{margin:0 0 6px;font:700 22px var(--font-display);color:var(--fg)}
+.empty p{margin:0 auto 16px;max-width:46ch}
+
+/* building groups */
+tbody tr.grp{cursor:default}
+tbody tr.grp td{padding:0;background:var(--surface-2);border-top:1px solid var(--line)}
+tbody tr.grp:hover td{background:var(--surface-2)}
+tbody tr.grp td:first-child{box-shadow:none}
+.grpbtn{all:unset;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;width:100%;padding:10px 12px;cursor:pointer}
+.grpbtn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.grpbtn[aria-pressed="true"]{box-shadow:inset 4px 0 0 var(--accent)}
+.gname{font:700 18px var(--font-display);letter-spacing:.02em}
+.gmeta{color:var(--fg-2)}
+.gact{margin-left:auto;color:var(--fg-3);font-size:13px;font-weight:600}
+.grpbtn:hover .gact,.grpbtn[aria-pressed="true"] .gact{color:var(--accent)}
+.grpbtn:hover .gact{text-decoration:underline;text-underline-offset:3px}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(8,14,20,.5);z-index:30}
+.drawer{position:fixed;top:0;bottom:0;right:0;width:min(600px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:31;display:flex;flex-direction:column}
+.dhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 14px;border-bottom:1px solid var(--line)}
+.dhead h2{margin:0;font:700 24px/1.1 var(--font-display);overflow-wrap:anywhere}
+.dhead p{margin:4px 0 0;color:var(--fg-2)}
+.dbody{overflow-y:auto;padding:6px 20px 20px;flex:1}
+.dfoot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--surface)}
+.dfoot .spacer{flex:1}
+fieldset{border:0;margin:18px 0 0;padding:0;min-width:0}
+legend{padding:0;margin-bottom:8px;font:600 12px var(--font-body);text-transform:uppercase;letter-spacing:.09em;color:var(--fg-2)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld.wide{grid-column:1/-1}
+.fld label{font-weight:600;font-size:13px}
+.req{font-weight:500;color:var(--fg-3);font-size:12px}
+.fld input,.fld select,.fld textarea{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+.fld textarea{resize:vertical}
+.hint{color:var(--fg-3)}
+.err{color:var(--bad);min-height:0}
+.log{margin-top:26px}
+.log h3{margin:0 0 8px;font:600 12px var(--font-body);text-transform:uppercase;letter-spacing:.09em;color:var(--fg-2)}
+.noteadd{display:flex;gap:8px;margin-bottom:10px}
+.noteadd input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:8px 10px}
+.log ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.log li{padding:8px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.log li small{display:block;color:var(--fg-3)}
+.notice{margin:14px 0 0;padding:10px 12px;border-radius:6px;background:var(--warn-soft);color:var(--warn);font-weight:500}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:6px;font-weight:500;z-index:40;max-width:calc(100% - 32px)}
+
+@media (max-width:760px){
+  h1{font-size:27px}
+  .tablewrap{border:0;background:transparent;overflow:visible}
+  table{min-width:0;display:block}
+  thead{display:none}
+  tbody{display:block}
+  tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:12px 12px 12px 16px;margin-bottom:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;position:relative}
+  tbody tr td{display:block;border:0;padding:0}
+  tbody tr:hover td{background:transparent}
+  tbody tr td:first-child{box-shadow:none}
+  tbody tr::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--stripe);border-radius:8px 0 0 8px}
+  td::before{content:attr(data-label);display:block;font:600 11px var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-3);margin-bottom:2px}
+  td.c-name,td.c-flags,td.c-scan{grid-column:1/-1}
+  tbody tr.grp{display:block;padding:0;margin:16px 0 8px;background:transparent;border:0;border-radius:0}
+  tbody tr.grp::before{display:none}
+  tbody tr.grp td{border-radius:8px;background:var(--surface-2);border:1px solid var(--line)}
+  tbody tr.grp td::before{display:none}
+  tbody tr.grp:hover td{background:var(--surface-2)}
+  .gact{margin-left:0;width:100%}
+  td.c-flags:empty{display:none}
+  .grid{grid-template-columns:1fr}
+  .drawer{width:100%;border-left:0}
+}
+@media (prefers-reduced-motion:no-preference){
+  .drawer{animation:slide .16s ease-out}
+  @keyframes slide{from{transform:translateX(24px);opacity:.4}to{transform:none;opacity:1}}
+}
+.foot{margin:18px 0 0;color:var(--fg-3);font-size:13px}
+.foot.warn{color:var(--warn);font-weight:500}
+.summary{margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.summary p{margin:0 0 10px}
+.summary p:last-child{margin-bottom:0}
+fieldset .actions{margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>Printer Registry</h1>
+    <p class="sub" id="sub">Loading registry</p>
+  </div>
+  <div class="actions">
+    <button class="btn" id="btnStd" type="button">Site standards</button>
+    <button class="btn" id="btnData" type="button">Backup and import</button>
+    <button class="btn" id="btnExport" type="button" hidden>Export CSV</button>
+    <button class="btn primary" id="btnAdd" type="button">Add printer</button>
+  </div>
+</header>
+
+<div class="chips" id="chips" role="group" aria-label="Quick filters"></div>
+
+<div class="toolbar">
+  <input id="q" type="search" placeholder="Search name, IP, room, model, scan account" aria-label="Search printers" autocomplete="off">
+  <select id="fBuilding" aria-label="Filter by building"></select>
+  <select id="fMake" aria-label="Filter by make"></select>
+  <select id="fConn" aria-label="Filter by connection"></select>
+  <select id="fStatus" aria-label="Filter by status"></select>
+  <button class="btn" id="btnClear" type="button">Clear</button>
+</div>
+
+<div class="tablewrap" id="tablewrap">
+  <table id="tbl">
+    <thead>
+      <tr>
+        <th aria-sort="none"><button type="button" data-sort="status">Status <span class="arr"></span></button></th>
+        <th aria-sort="none"><button type="button" data-sort="name">Printer <span class="arr"></span></button></th>
+        <th aria-sort="none"><button type="button" data-sort="building">Building and room <span class="arr"></span></button></th>
+        <th aria-sort="none"><button type="button" data-sort="make">Make and model <span class="arr"></span></button></th>
+        <th aria-sort="none"><button type="button" data-sort="ip">IP address <span class="arr"></span></button></th>
+        <th>DNS</th>
+        <th>Scan to email</th>
+        <th>Flags</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+<div class="empty" id="empty" hidden></div>
+
+<p class="foot" id="foot"></p>
+<input type="file" id="fileJson" accept=".json,application/json" hidden>
+<input type="file" id="fileCsv" accept=".csv,text/csv" hidden>
+
+<div id="scrim" class="scrim" hidden></div>
+<aside id="drawer" class="drawer" role="dialog" aria-modal="true" aria-labelledby="dtitle" hidden></aside>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+'use strict';
+
+var STATUS=['Active','Needs attention','Down','Retired'];
+var CONN=['Network','USB to a PC','Standalone'];
+var STATUS_CLS={'Active':'good','Needs attention':'warn','Down':'bad','Retired':'idle'};
+var IPV4=/^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+
+var SECTIONS=[
+  {title:'Identity',fields:[
+    {k:'name',l:'Printer name',req:1,ph:'WHSE-HP-01',wide:1},
+    {k:'status',l:'Status',t:'sel',o:STATUS},
+    {k:'building',l:'Building',list:'dl_building',ph:'Building 2'},
+    {k:'location',l:'Room or area',ph:'Shipping dock, east wall'},
+    {k:'make',l:'Make',list:'dl_make',ph:'HP'},
+    {k:'model',l:'Model',list:'dl_model',ph:'M480'}
+  ]},
+  {title:'Connection',fields:[
+    {k:'connection',l:'How it is connected',t:'sel',o:CONN},
+    {k:'connectedTo',l:'Connected to',ph:'Host PC name, desk or user',hint:'Where a USB or standalone printer is attached or used.'}
+  ]},
+  {title:'Network',net:true,fields:[
+    {k:'ip',l:'IP address',t:'ip',ph:'10.0.0.25'},
+    {k:'scheme',l:'Admin page uses',t:'sel',o:['http','https']},
+    {k:'hostname',l:'Hostname'},
+    {k:'ipMode',l:'Address type',t:'sel',o:['Static','DHCP reservation','DHCP']},
+    {k:'subnet',l:'Subnet mask',t:'ip'},
+    {k:'gateway',l:'Gateway',t:'ip'},
+    {k:'dns1',l:'DNS 1',t:'ip'},
+    {k:'dns2',l:'DNS 2',t:'ip'}
+  ]},
+  {title:'Scan to email',net:true,fields:[
+    {k:'scannerAccount',l:'Scanner account',ph:'scanner@example.com'},
+    {k:'vaultRef',l:'Password vault entry',hint:'Entry name only. Never type the password here.'},
+    {k:'scanTest',l:'Last scan test',t:'sel',o:['Not tested','Passed','Failed','Not supported'],hint:'Choose Not supported if this printer has no scan to email function.'},
+    {k:'scanTestDate',l:'Test date',t:'date'}
+  ]},
+  {title:'Support',fields:[
+    {k:'firmware',l:'Firmware version'},
+    {k:'tonerModel',l:'Toner or supply model'},
+    {k:'warrantyEnd',l:'Warranty or contract ends',t:'date'},
+    {k:'lastServiced',l:'Last serviced',t:'date'},
+    {k:'lastVerified',l:'Details last verified',t:'date'}
+  ]},
+  {title:'Notes',fields:[{k:'notes',l:'Notes',t:'area',wide:1}]}
+];
+var ALLF=[];
+SECTIONS.forEach(function(s){s.fields.forEach(function(f){ALLF.push(f);});});
+
+var STD_FIELDS=[
+  {k:'dns1',l:'Standard DNS 1',t:'ip'},
+  {k:'dns2',l:'Standard DNS 2',t:'ip'},
+  {k:'subnet',l:'Standard subnet mask',t:'ip'},
+  {k:'scanner',l:'Standard scanner account',ph:'scanner@example.com'},
+  {k:'vaultRef',l:'Standard vault entry',hint:'Entry name only. Never type the password here.'}
+];
+
+var $=function(s){return document.querySelector(s);};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function val(x){return x?esc(x):'<span class="muted">-</span>';}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function daysUntil(s){var m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(s||'');if(!m)return null;var t=new Date(+m[1],+m[2]-1,+m[3]);var n=new Date();var n0=new Date(n.getFullYear(),n.getMonth(),n.getDate());return Math.round((t-n0)/864e5);}
+function ipNum(s){if(!IPV4.test(s||''))return Infinity;return s.split('.').reduce(function(a,b){return a*256+(+b);},0);}
+function ipKey(p){return isNet(p)?ipNum(p.ip):Infinity;}
+function cmpStr(a,b){return String(a||'').localeCompare(String(b||''),undefined,{numeric:true,sensitivity:'base'});}
+
+var db=null,user=null,downloads=null,uid=null,canWrite=null;
+var printers=[],std={},ipCounts={},flagMap={};
+var loaded=false,failed='';
+var filters={q:'',building:'',make:'',status:'',conn:'',chip:'all'};
+var sort={k:'building',dir:1};
+var ctx=null,busy=false,lastFocus=null,toastTimer=null;
+
+function mayWrite(){return canWrite!==false && !!db;}
+function bkey(p){return String(p.building||'').trim();}
+function conn(p){return p.connection||'Network';}
+function isNet(p){return conn(p)==='Network';}
+function noScan(p){return isNet(p)&&p.status!=='Retired'&&p.scanTest==='Not supported';}
+function applyScan(){
+  var el=$('#f_scanTest');if(!el)return;
+  var off=el.value==='Not supported';
+  ['scannerAccount','vaultRef','scanTestDate'].forEach(function(k){var w=$('#w_'+k);if(w)w.hidden=off;});
+}
+function applyConn(){
+  var el=$('#f_connection');if(!el)return;
+  var net=el.value==='Network';
+  document.querySelectorAll('#drawer fieldset[data-net]').forEach(function(fs){fs.hidden=!net;});
+  var w=$('#w_connectedTo');if(w)w.hidden=net;
+}
+
+/* ---------- derived data ---------- */
+function recompute(){
+  ipCounts={};flagMap={};
+  printers.forEach(function(p){if(isNet(p)&&p.ip&&p.status!=='Retired'){ipCounts[p.ip]=(ipCounts[p.ip]||0)+1;}});
+  printers.forEach(function(p){flagMap[p.id]=flagsFor(p);});
+}
+function flagsFor(p){
+  if(p.status==='Retired')return [];
+  var f=[];
+  var net=isNet(p);
+  if(net&&p.ip&&ipCounts[p.ip]>1)f.push({t:'Duplicate IP',c:'bad'});
+  if(net&&p.scanTest==='Failed')f.push({t:'Scan test failed',c:'bad'});
+  function dnsOff(k){var sv=std[k];if(!sv)return false;var v=p[k]||'';return v?v!==sv:p.ipMode==='Static';}
+  if(net&&(dnsOff('dns1')||dnsOff('dns2')))f.push({t:'DNS off standard',c:'warn'});
+  if(net&&p.scanTest!=='Not supported'&&std.scanner&&p.scannerAccount&&String(p.scannerAccount).toLowerCase()!==String(std.scanner).toLowerCase())f.push({t:'Scan account differs',c:'warn'});
+  var d=daysUntil(p.warrantyEnd);
+  if(d!==null){if(d<0)f.push({t:'Warranty expired',c:'warn'});else if(d<=90)f.push({t:'Warranty ends in '+d+' d',c:'warn'});}
+  return f;
+}
+var sorters={
+  status:function(a,b){return (STATUS.indexOf(a.status)-STATUS.indexOf(b.status))||cmpStr(a.name,b.name);},
+  name:function(a,b){return cmpStr(a.name,b.name);},
+  building:function(a,b){return cmpStr(a.building,b.building)||(ipKey(a)-ipKey(b))||cmpStr(a.location,b.location)||cmpStr(a.name,b.name);},
+  make:function(a,b){return cmpStr(a.make,b.make)||cmpStr(a.model,b.model)||cmpStr(a.name,b.name);},
+  ip:function(a,b){return (ipKey(a)-ipKey(b))||cmpStr(a.name,b.name);}
+};
+function visible(){
+  var q=filters.q.trim().toLowerCase();
+  var list=printers.filter(function(p){
+    if(filters.building){var bk=bkey(p);if(filters.building==='__none__'?bk!=='':bk!==filters.building)return false;}
+    if(filters.make&&p.make!==filters.make)return false;
+    if(filters.conn&&conn(p)!==filters.conn)return false;
+    if(filters.status&&p.status!==filters.status)return false;
+    if(filters.chip==='active'&&p.status!=='Active')return false;
+    if(filters.chip==='attn'&&!(p.status==='Down'||p.status==='Needs attention'))return false;
+    if(filters.chip==='flag'&&!(flagMap[p.id]||[]).length)return false;
+    if(filters.chip==='noscan'&&!noScan(p))return false;
+    if(q){
+      var hay=[p.name,p.building,p.location,p.make,p.model,p.ip,p.hostname,p.connectedTo,p.dns1,p.dns2,p.scannerAccount,p.firmware,p.tonerModel,p.notes].join(' ').toLowerCase();
+      if(hay.indexOf(q)<0)return false;
+    }
+    return true;
+  });
+  var fn=sorters[sort.k]||sorters.building;
+  list.sort(function(a,b){return fn(a,b)*sort.dir;});
+  return list;
+}
+
+/* ---------- rendering ---------- */
+function uniq(key){
+  var s={};printers.forEach(function(p){var v=p[key]==null?'':String(p[key]).trim();if(v)s[v]=1;});
+  return Object.keys(s).sort(cmpStr);
+}
+function fillSelect(el,label,items,current){
+  var html='<option value="">'+esc(label)+'</option>'+items.map(function(i){var v=typeof i==='string'?i:i.v,l=typeof i==='string'?i:i.l;return '<option value="'+esc(v)+'"'+(v===current?' selected':'')+'>'+esc(l)+'</option>';}).join('');
+  if(el.dataset.sig===html)return;
+  el.innerHTML=html;el.dataset.sig=html;
+  el.value=current||'';
+}
+function render(){
+  recompute();
+  renderHeader();
+  renderChips();
+  var bs=uniq('building').map(function(b){return {v:b,l:b};});
+  if(printers.some(function(p){return !bkey(p);}))bs.push({v:'__none__',l:'No building'});
+  fillSelect($('#fBuilding'),'All buildings',bs,filters.building);
+  fillSelect($('#fMake'),'All makes',uniq('make'),filters.make);
+  fillSelect($('#fConn'),'Any connection',CONN,filters.conn);
+  fillSelect($('#fStatus'),'Any status',STATUS,filters.status);
+  renderTable();
+}
+function renderHeader(){
+  var n=printers.length,b=uniq('building').length;
+  var sub;
+  if(failed)sub='Browser storage is unavailable';
+  else if(!loaded)sub='Loading registry';
+  else if(!n)sub='No printers recorded yet';
+  else sub=n+(n===1?' printer':' printers')+(b?' in '+b+(b===1?' building':' buildings'):'');
+  $('#sub').textContent=sub;
+  $('#btnAdd').hidden=!mayWrite();
+  $('#btnStd').hidden=!db;
+  $('#btnExport').hidden=!(downloads&&printers.length);
+  var ft=$('#foot');
+  if(store.ok()){ft.className='foot';ft.textContent='Printer data is saved in this browser only. Use Backup and import to keep a copy or move it to another computer.';}
+  else{ft.className='foot warn';ft.textContent='This browser is blocking site storage, so changes are lost when you close the page. Use Backup and import to export a copy before you leave.';}
+}
+function renderChips(){
+  var all=printers.length;
+  var act=printers.filter(function(p){return p.status==='Active';}).length;
+  var attn=printers.filter(function(p){return p.status==='Down'||p.status==='Needs attention';}).length;
+  var fl=printers.filter(function(p){return (flagMap[p.id]||[]).length;}).length;
+  var ns=printers.filter(noScan).length;
+  var defs=[['all','All',all],['active','Active',act],['attn','Down or needs attention',attn],['flag','Flagged',fl]];
+  if(ns||filters.chip==='noscan')defs.push(['noscan','No scan function',ns]);
+  $('#chips').innerHTML=defs.map(function(d){
+    return '<button type="button" class="chip" data-chip="'+d[0]+'" aria-pressed="'+(filters.chip===d[0])+'">'+esc(d[1])+' <b>'+d[2]+'</b></button>';
+  }).join('');
+}
+function rowHtml(p){
+  var cls=STATUS_CLS[p.status]||'idle';
+  var ip;
+  if(IPV4.test(p.ip||'')){
+    ip='<a class="ip" href="'+(p.scheme==='https'?'https':'http')+'://'+esc(p.ip)+'" target="_blank" rel="noopener noreferrer" title="Open the printer admin page">'+esc(p.ip)+'</a>';
+  }else if(p.ip){ip='<span class="ip badip">'+esc(p.ip)+'</span>';}
+  else{ip='<span class="muted">Not set</span>';}
+  var dns=(p.dns1||p.dns2)?'<div class="stack mono"><span>'+esc(p.dns1||'-')+'</span><span class="dim">'+esc(p.dns2||'-')+'</span></div>':'<span class="muted">-</span>';
+  var tcls=p.scanTest==='Passed'?'good':p.scanTest==='Failed'?'bad':'idle';
+  var scan='<div class="stack"><span>'+(p.scannerAccount?esc(p.scannerAccount):'<span class="muted">-</span>')+'</span>'+
+    (p.scannerAccount||p.scanTest&&p.scanTest!=='Not tested'?'<span class="scanline"><span class="pill '+tcls+'">'+esc(p.scanTest||'Not tested')+'</span>'+(p.scanTestDate?'<span class="muted mono">'+esc(p.scanTestDate)+'</span>':'')+'</span>':'')+'</div>';
+  if(p.scanTest==='Not supported')scan='<span class="pill idle" title="This printer has no scan to email function">No scan function</span>';
+  var flags=(flagMap[p.id]||[]).map(function(f){return '<span class="flag '+f.c+'">'+esc(f.t)+'</span>';}).join('');
+  var loc=(p.building||p.location)?'<div class="stack"><span>'+val(p.building)+'</span><span class="dim">'+(p.location?esc(p.location):'')+'</span></div>':'<span class="muted">-</span>';
+  var mm=(p.make||p.model)?'<div class="stack"><span>'+val(p.make)+'</span><span class="dim">'+(p.model?esc(p.model):'')+'</span></div>':'<span class="muted">-</span>';
+  if(!isNet(p)){
+    var kind=conn(p)==='Standalone'?'Standalone':'USB';
+    ip='<div class="stack"><span>'+kind+'</span>'+(p.connectedTo?'<span class="dim">'+esc(p.connectedTo)+'</span>':'')+'</div>';
+    dns='<span class="muted">n/a</span>';scan='<span class="muted">n/a</span>';
+  }
+  return '<tr data-id="'+esc(p.id)+'" class="s-'+cls+'">'+
+    '<td data-label="Status"><span class="pill '+cls+'">'+esc(p.status||'Active')+'</span></td>'+
+    '<td class="c-name" data-label="Printer"><button type="button" class="rowbtn" data-open="'+esc(p.id)+'">'+esc(p.name||'Unnamed')+'</button>'+(p.hostname?'<div class="mono muted">'+esc(p.hostname)+'</div>':'')+'</td>'+
+    '<td data-label="Building and room">'+loc+'</td>'+
+    '<td data-label="Make and model">'+mm+'</td>'+
+    '<td data-label="IP address">'+ip+'</td>'+
+    '<td data-label="DNS">'+dns+'</td>'+
+    '<td class="c-scan" data-label="Scan to email">'+scan+'</td>'+
+    '<td class="c-flags" data-label="Flags">'+flags+'</td></tr>';
+}
+function renderTable(){
+  var list=visible();
+  var empty=$('#empty'),wrap=$('#tablewrap');
+  if(failed){
+    wrap.hidden=true;empty.hidden=false;
+    empty.innerHTML='<h2>Storage is unavailable</h2><p>This page could not read its saved data. Reload the page and try again.</p>';
+    return;
+  }
+  if(!loaded){wrap.hidden=true;empty.hidden=false;empty.innerHTML='<h2>Loading registry</h2><p>Fetching the printer list.</p>';return;}
+  if(!printers.length){
+    wrap.hidden=true;empty.hidden=false;
+    empty.innerHTML='<h2>No printers yet</h2><p>Add the first printer to start the registry. Each record holds location, IP, DNS, scanner account, support dates and a change log.</p>'+(mayWrite()?'<div class="actions" style="justify-content:center"><button class="btn primary" type="button" data-act="add">Add printer</button><button class="btn" type="button" data-act="data">Backup and import</button></div>':'');
+    return;
+  }
+  if(!list.length){
+    wrap.hidden=true;empty.hidden=false;
+    empty.innerHTML='<h2>No printers match</h2><p>Nothing fits the current search and filters.</p><button class="btn" type="button" data-act="clear">Clear filters</button>';
+    return;
+  }
+  empty.hidden=true;wrap.hidden=false;
+  var groups=[],gmap={};
+  list.forEach(function(p){var k=bkey(p);if(!(k in gmap)){gmap[k]=[];groups.push(k);}gmap[k].push(p);});
+  groups.sort(function(a,b){if(a===b)return 0;if(!a)return 1;if(!b)return -1;return cmpStr(a,b)*(sort.k==='building'?sort.dir:1);});
+  var html='';
+  groups.forEach(function(k){
+    var ps=gmap[k];
+    var down=ps.filter(function(p){return p.status==='Down';}).length;
+    var attn=ps.filter(function(p){return p.status==='Needs attention';}).length;
+    var fl=ps.filter(function(p){return (flagMap[p.id]||[]).length;}).length;
+    var v=k||'__none__',on=filters.building===v;
+    html+='<tr class="grp"><td colspan="8"><button type="button" class="grpbtn" data-building="'+esc(v)+'" aria-pressed="'+on+'"><span class="gname">'+esc(k||'No building')+'</span><span class="gmeta">'+ps.length+(ps.length===1?' printer':' printers')+'</span>'+(down?'<span class="flag bad">'+down+' down</span>':'')+(attn?'<span class="flag warn">'+attn+' need attention</span>':'')+(fl?'<span class="flag warn">'+fl+' flagged</span>':'')+'<span class="gact">'+(on?'Show all buildings':'Show only this building')+'</span></button></td></tr>'+ps.map(rowHtml).join('');
+  });
+  $('#rows').innerHTML=html;
+  document.querySelectorAll('th').forEach(function(th){
+    var b=th.querySelector('button');if(!b)return;
+    var on=b.dataset.sort===sort.k;
+    th.setAttribute('aria-sort',on?(sort.dir===1?'ascending':'descending'):'none');
+    b.querySelector('.arr').textContent=on?(sort.dir===1?'▲':'▼'):'';
+  });
+}
+
+/* ---------- drawer ---------- */
+function fieldHtml(f,v){
+  var id='f_'+f.k,input;
+  v=v==null?'':v;
+  if(f.t==='sel'){
+    input='<select id="'+id+'">'+f.o.map(function(o){return '<option'+(o===v?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';
+  }else if(f.t==='area'){
+    input='<textarea id="'+id+'" rows="4">'+esc(v)+'</textarea>';
+  }else if(f.t==='date'){
+    input='<input id="'+id+'" type="date" value="'+esc(/^\d{4}-\d\d-\d\d$/.test(v)?v:'')+'">';
+  }else{
+    input='<input id="'+id+'" type="text" value="'+esc(v)+'"'+(f.list?' list="'+f.list+'"':'')+(f.ph?' placeholder="'+esc(f.ph)+'"':'')+(f.t==='ip'?' inputmode="decimal" class="mono"':'')+' autocomplete="off" spellcheck="false">';
+  }
+  return '<div class="fld'+(f.wide?' wide':'')+'" id="w_'+f.k+'"><label for="'+id+'">'+esc(f.l)+(f.req?' <span class="req">required</span>':'')+'</label>'+input+(f.hint?'<small class="hint">'+esc(f.hint)+'</small>':'')+'<small class="err" id="e_'+f.k+'" role="alert"></small></div>';
+}
+function datalists(){
+  function dl(id,key){return '<datalist id="'+id+'">'+uniq(key).map(function(x){return '<option value="'+esc(x)+'">';}).join('')+'</datalist>';}
+  return dl('dl_building','building')+dl('dl_make','make')+dl('dl_model','model');
+}
+function newDefaults(){
+  return {status:'Active',connection:'Network',scheme:'http',ipMode:'Static',scanTest:'Not tested',dns1:std.dns1||'',dns2:std.dns2||'',subnet:std.subnet||'',scannerAccount:std.scanner||'',vaultRef:std.vaultRef||''};
+}
+function openDrawer(html,mode,id){
+  lastFocus=document.activeElement;
+  ctx={mode:mode,id:id||null,dirty:false,armed:false};
+  var d=$('#drawer');
+  d.innerHTML=html;
+  d.hidden=false;$('#scrim').hidden=false;
+  var first=d.querySelector('input:not([disabled]),select:not([disabled])');
+  if(first&&!id)first.focus();else{var cb=d.querySelector('[data-act="close"]');if(cb)cb.focus();}
+  fillNames(d);
+}
+function closeDrawer(force){
+  if(!ctx)return;
+  if(!force&&ctx.dirty&&!ctx.armed){ctx.armed=true;toast('You have unsaved changes. Close again to discard them.');return;}
+  $('#drawer').hidden=true;$('#scrim').hidden=true;$('#drawer').innerHTML='';
+  ctx=null;
+  if(lastFocus&&document.contains(lastFocus)){try{lastFocus.focus();}catch(e){}}
+}
+function openPrinter(id,preset){
+  var existing=id?printers.find(function(p){return p.id===id;}):null;
+  var base=preset||existing||newDefaults();
+  var ro=!mayWrite();
+  var title=existing?existing.name:(preset?'Duplicate printer':'New printer');
+  var link='';
+  if(existing&&isNet(existing)&&IPV4.test(existing.ip||'')){
+    link='<p><a class="ip" href="'+(existing.scheme==='https'?'https':'http')+'://'+esc(existing.ip)+'" target="_blank" rel="noopener noreferrer">Open admin page at '+esc(existing.ip)+'</a></p>';
+  }
+  var flags=existing?(flagMap[existing.id]||[]).map(function(f){return '<span class="flag '+f.c+'">'+esc(f.t)+'</span>';}).join(''):'';
+  var secs=SECTIONS.map(function(s){
+    return '<fieldset'+(s.net?' data-net="1"':'')+(s.net&&conn(base)!=='Network'?' hidden':'')+'><legend>'+esc(s.title)+'</legend><div class="grid">'+s.fields.map(function(f){return fieldHtml(f,base[f.k]);}).join('')+'</div></fieldset>';
+  }).join('');
+  var log='';
+  if(existing){
+    var entries=(existing.log||[]).slice().reverse();
+    log='<section class="log"><h3>Change log</h3>'+(ro?'':'<div class="noteadd"><input id="noteText" type="text" placeholder="Add a note, for example: replaced fuser" autocomplete="off"><button type="button" class="btn" data-act="note">Add to log</button></div>')+
+      '<ol>'+(entries.length?entries.map(function(e){
+        var when=''; try{when=new Date(e.t).toLocaleString([], {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}catch(x){}
+        return '<li>'+esc(e.x)+'<small>'+esc(when)+' by <span data-uid="'+esc(e.u||'')+'">Someone</span></small></li>';
+      }).join(''):'<li class="muted">No entries yet.</li>')+'</ol></section>';
+  }
+  var foot='';
+  if(!ro){
+    foot='<div class="dfoot" id="dfoot"><button type="button" class="btn primary" data-act="save">'+(existing?'Save changes':'Add printer')+'</button><button type="button" class="btn" data-act="close">Cancel</button><span class="spacer"></span>'+
+      (existing?'<button type="button" class="btn" data-act="dup">Duplicate</button><button type="button" class="btn" data-act="verify">Mark verified today</button><button type="button" class="btn danger" data-act="askdel">Delete</button>':'')+'</div>';
+  }else{
+    foot='<div class="dfoot"><button type="button" class="btn" data-act="close">Close</button></div>';
+  }
+  var html='<div class="dhead"><div><h2 id="dtitle">'+esc(title)+'</h2>'+link+(flags?'<div>'+flags+'</div>':'')+'</div><button type="button" class="btn" data-act="close" aria-label="Close">Close</button></div>'+
+    '<div class="dbody"><form id="pform" novalidate'+(ro?' inert':'')+'>'+(ro?'<div class="notice">You have view-only access to this registry.</div>':'')+datalists()+secs+'</form>'+log+'</div>'+foot;
+  openDrawer(html,'printer',existing?existing.id:null);
+  applyConn();
+  applyScan();
+  if(ro)$('#drawer').querySelectorAll('input,select,textarea').forEach(function(e){if(e.closest('#pform'))e.disabled=true;});
+}
+function openStandards(){
+  var ro=!mayWrite();
+  var html='<div class="dhead"><div><h2 id="dtitle">Site standards</h2><p>New printers start with these values. Printers that differ are flagged in the table.</p></div><button type="button" class="btn" data-act="close" aria-label="Close">Close</button></div>'+
+    '<div class="dbody"><form id="sform" novalidate>'+(ro?'<div class="notice">You have view-only access to this registry.</div>':'')+'<fieldset><legend>Defaults for every printer</legend><div class="grid">'+STD_FIELDS.map(function(f){return fieldHtml(f,std[f.k]);}).join('')+'</div></fieldset></form></div>'+
+    '<div class="dfoot">'+(ro?'':'<button type="button" class="btn primary" data-act="savestd">Save standards</button>')+'<button type="button" class="btn" data-act="close">'+(ro?'Close':'Cancel')+'</button></div>';
+  openDrawer(html,'std',null);
+  if(ro)$('#drawer').querySelectorAll('#sform input').forEach(function(e){e.disabled=true;});
+}
+async function fillNames(root){
+  var els=[].slice.call(root.querySelectorAll('[data-uid]'));
+  if(!els.length||!user)return;
+  var ids=[];els.forEach(function(e){var i=e.dataset.uid;if(i&&ids.indexOf(i)<0)ids.push(i);});
+  var ps={};
+  try{if(ids.length)ps=await user.profiles(ids);}catch(e){}
+  els.forEach(function(e){var i=e.dataset.uid;e.textContent=(i&&ps[i]&&ps[i].name)||'Someone';});
+}
+
+/* ---------- data actions ---------- */
+function readForm(fields){
+  var out={};
+  fields.forEach(function(f){var el=$('#f_'+f.k);out[f.k]=el?String(el.value||'').trim():'';});
+  return out;
+}
+function validate(fields,vals){
+  var ok=true,firstBad=null;
+  fields.forEach(function(f){var e=$('#e_'+f.k);if(e)e.textContent='';});
+  fields.forEach(function(f){
+    var msg='';
+    var fe=$('#f_'+f.k);if(fe&&fe.closest('[hidden]'))return;
+    if(f.req&&!vals[f.k])msg='Enter a '+f.l.toLowerCase()+'.';
+    else if(f.t==='ip'&&vals[f.k]&&!IPV4.test(vals[f.k]))msg='Use the form 10.0.0.25.';
+    if(msg){ok=false;var e=$('#e_'+f.k);if(e)e.textContent=msg;if(!firstBad)firstBad=f.k;}
+  });
+  if(firstBad){var el=$('#f_'+firstBad);if(el)el.focus();}
+  return ok;
+}
+function dbErr(e){
+  var c=e&&e.code;
+  if(c==='quota_exceeded')return 'Browser storage is full. Export a backup, delete retired records and try again.';
+  return 'Could not save. Check that the browser allows site storage and try again.';
+}
+function stripId(p){var o={};Object.keys(p).forEach(function(k){if(k!=='id')o[k]=p[k];});return o;}
+async function run(fn){
+  if(busy)return;busy=true;
+  document.querySelectorAll('#drawer button').forEach(function(b){b.disabled=true;});
+  try{await fn();}
+  catch(e){toast(dbErr(e));console.error(e);}
+  finally{
+    busy=false;
+    document.querySelectorAll('#drawer button').forEach(function(b){b.disabled=false;});
+  }
+}
+async function savePrinter(){
+  var vals=readForm(ALLF);
+  if(!validate(ALLF,vals))return;
+  await run(async function(){
+    var now=new Date().toISOString();
+    if(ctx.id){
+      var prev=printers.find(function(p){return p.id===ctx.id;});
+      if(!prev)throw {code:'unavailable'};
+      var parts=[];
+      ALLF.forEach(function(f){
+        var a=String(prev[f.k]!=null&&prev[f.k]!==''?prev[f.k]:(f.t==='sel'?f.o[0]:'')).trim(),b=vals[f.k];
+        if(a===b)return;
+        parts.push(f.k==='notes'?'Notes':f.l+': '+(a||'blank')+' to '+(b||'blank'));
+      });
+      var log=(prev.log||[]).slice();
+      if(parts.length)log.push({t:now,u:uid,x:('Updated '+parts.join('; ')).slice(0,400)});
+      var data=Object.assign(stripId(prev),vals,{log:log.slice(-80)});
+      await db.doc('printers/'+ctx.id).set(data);
+      toast('Saved '+vals.name);
+    }else{
+      var ref=db.collection('printers').doc();
+      await ref.set(Object.assign({},vals,{createdAt:now,log:[{t:now,u:uid,x:'Added to registry'}]}));
+      toast('Added '+vals.name);
+    }
+    closeDrawer(true);
+  });
+}
+async function saveStd(){
+  var vals=readForm(STD_FIELDS);
+  if(!validate(STD_FIELDS,vals))return;
+  await run(async function(){
+    await db.doc('settings/site').set(vals);
+    toast('Site standards saved');
+    closeDrawer(true);
+  });
+}
+async function verifyToday(){
+  var p=printers.find(function(x){return x.id===ctx.id;});if(!p)return;
+  await run(async function(){
+    var log=(p.log||[]).concat([{t:new Date().toISOString(),u:uid,x:'Marked details verified'}]).slice(-80);
+    await db.doc('printers/'+p.id).update({lastVerified:todayStr(),log:log});
+    toast('Marked verified');
+    var id=p.id;ctx.dirty=false;closeDrawer(true);
+    setTimeout(function(){openPrinter(id);},0);
+  });
+}
+async function addNote(){
+  var el=$('#noteText');var t=el?el.value.trim():'';if(!t){if(el)el.focus();return;}
+  var p=printers.find(function(x){return x.id===ctx.id;});if(!p)return;
+  await run(async function(){
+    var log=(p.log||[]).concat([{t:new Date().toISOString(),u:uid,x:t.slice(0,400)}]).slice(-80);
+    await db.doc('printers/'+p.id).update({log:log});
+    var id=p.id;ctx.dirty=false;closeDrawer(true);
+    setTimeout(function(){openPrinter(id);},0);
+  });
+}
+async function deletePrinter(){
+  var p=printers.find(function(x){return x.id===ctx.id;});if(!p)return;
+  await run(async function(){
+    await db.doc('printers/'+p.id).delete();
+    toast('Deleted '+(p.name||'printer'));
+    closeDrawer(true);
+  });
+}
+function askDelete(){
+  var f=$('#dfoot');if(!f)return;
+  f.innerHTML='<div class="confirm"><strong>Delete this printer and its change log?</strong><span class="spacer" style="flex:1"></span><button type="button" class="btn danger" data-act="del">Yes, delete</button><button type="button" class="btn" data-act="keep">Keep it</button></div>';
+  var k=f.querySelector('[data-act="keep"]');if(k)k.focus();
+}
+function keepPrinter(){ if(ctx&&ctx.id){var id=ctx.id;ctx.dirty=false;closeDrawer(true);setTimeout(function(){openPrinter(id);},0);} }
+function duplicate(){
+  var p=printers.find(function(x){return x.id===ctx.id;});if(!p)return;
+  var copy=stripId(p);
+  delete copy.log;delete copy.createdAt;
+  copy.name=(p.name||'Printer')+' copy';copy.ip='';copy.hostname='';copy.scanTest=p.scanTest==='Not supported'?'Not supported':'Not tested';copy.scanTestDate='';copy.lastVerified='';copy.lastServiced='';
+  ctx.dirty=false;closeDrawer(true);
+  setTimeout(function(){openPrinter(null,copy);},0);
+}
+
+/* ---------- export ---------- */
+function csvCell(v){
+  v=String(v==null?'':v);
+  if(/^[=+\-@\t\r]/.test(v))v="'"+v;
+  return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+}
+async function exportCsv(){
+  if(!downloads)return;
+  var cols=ALLF.map(function(f){return f.k;});
+  var rows=[cols.join(',')].concat(printers.slice().sort(sorters.building).map(function(p){
+    return cols.map(function(k){return csvCell(p[k]);}).join(',');
+  }));
+  try{
+    await downloads.save({filename:'printer-registry-'+todayStr()+'.csv',data:rows.join('\r\n')});
+    toast('Export ready');
+  }catch(e){
+    if(e&&e.code!=='declined')toast('Could not create the file. Check the browser download settings.');
+  }
+}
+
+function toast(msg){
+  var t=$('#toast');t.textContent=msg;t.hidden=false;
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.hidden=true;},3600);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',function(e){
+  var t=e.target;
+  var chip=t.closest&&t.closest('[data-chip]');
+  if(chip){filters.chip=chip.dataset.chip;render();return;}
+  var sb=t.closest&&t.closest('[data-sort]');
+  if(sb){var k=sb.dataset.sort;if(sort.k===k)sort.dir*=-1;else{sort.k=k;sort.dir=1;}renderTable();return;}
+  var gb=t.closest&&t.closest('[data-building]');
+  if(gb){var b=gb.dataset.building;filters.building=(filters.building===b)?'':b;render();return;}
+  var act=t.closest&&t.closest('[data-act]');
+  if(act){
+    var a=act.dataset.act;
+    if(a==='close')closeDrawer(false);
+    else if(a==='save')savePrinter();
+    else if(a==='savestd')saveStd();
+    else if(a==='dup')duplicate();
+    else if(a==='verify')verifyToday();
+    else if(a==='note')addNote();
+    else if(a==='askdel')askDelete();
+    else if(a==='del')deletePrinter();
+    else if(a==='keep')keepPrinter();
+    else if(a==='add')openPrinter(null);
+    else if(a==='clear')clearFilters();
+    else if(a==='data')openData();
+    else if(a==='exportjson')exportJson();
+    else if(a==='exportcsv')exportCsv();
+    else if(a==='pickjson')$('#fileJson').click();
+    else if(a==='pickcsv')$('#fileCsv').click();
+    else if(a==='applyimport')applyImport(act.dataset.mode);
+    else if(a==='cancelimport')cancelImport();
+    else if(a==='askclear')askClear();
+    else if(a==='clearall')clearAll();
+    else if(a==='keepdata')keepData();
+    return;
+  }
+  if(t.id==='scrim'){closeDrawer(false);return;}
+  var row=t.closest&&t.closest('tbody tr');
+  if(row&&row.dataset.id&&!t.closest('a')&&!t.closest('button')){openPrinter(row.dataset.id);return;}
+  var ob=t.closest&&t.closest('[data-open]');
+  if(ob){openPrinter(ob.dataset.open);}
+});
+function clearFilters(){
+  filters={q:'',building:'',make:'',status:'',conn:'',chip:'all'};
+  $('#q').value='';render();
+}
+$('#btnAdd').addEventListener('click',function(){openPrinter(null);});
+$('#btnStd').addEventListener('click',openStandards);
+$('#btnExport').addEventListener('click',exportCsv);
+$('#btnClear').addEventListener('click',clearFilters);
+$('#q').addEventListener('input',function(e){filters.q=e.target.value;renderTable();});
+$('#fBuilding').addEventListener('change',function(e){filters.building=e.target.value;render();});
+$('#fMake').addEventListener('change',function(e){filters.make=e.target.value;renderTable();});
+$('#fConn').addEventListener('change',function(e){filters.conn=e.target.value;renderTable();});
+$('#fStatus').addEventListener('change',function(e){filters.status=e.target.value;renderTable();});
+$('#drawer').addEventListener('input',function(e){if(ctx&&e.target.closest('#pform,#sform')){ctx.dirty=true;ctx.armed=false;}});
+$('#drawer').addEventListener('submit',function(e){e.preventDefault();});
+$('#drawer').addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='f_connection')applyConn();if(e.target.id==='f_scanTest')applyScan();});
+document.addEventListener('keydown',function(e){
+  if(!ctx)return;
+  if(e.key==='Escape'){e.preventDefault();closeDrawer(false);return;}
+  if(e.key==='Tab'){
+    var f=[].slice.call($('#drawer').querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]'));
+    if(!f.length)return;
+    var first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+});
+
+/* ---------- local storage backend (stands in for a shared database) ---------- */
+var STORE_KEY='printerRegistry.v1';
+var ID_OK=/^[A-Za-z0-9_-]{1,40}$/;
+function okId(id){return typeof id==='string'&&ID_OK.test(id)&&id!=='__proto__'&&id!=='constructor'&&id!=='prototype';}
+function newId(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+var store=(function(){
+  var mem={printers:{},site:{}},ok=true,pSubs=[],sSubs=[];
+  function isQuota(e){return !!e&&(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22||e.code===1014);}
+  function shape(o){
+    var out={printers:{},site:{}};
+    if(o&&typeof o==='object'){
+      if(o.printers&&typeof o.printers==='object'){
+        Object.keys(o.printers).forEach(function(id){
+          var r=o.printers[id];
+          if(okId(id)&&r&&typeof r==='object')out.printers[id]=r;
+        });
+      }
+      if(o.site&&typeof o.site==='object')out.site=o.site;
+    }
+    return out;
+  }
+  function snapP(){
+    return {docs:Object.keys(mem.printers).map(function(id){var d=clone(mem.printers[id]);return {id:id,data:function(){return d;}};})};
+  }
+  function snapS(){
+    var d=clone(mem.site);
+    return {exists:Object.keys(d).length>0,data:function(){return d;}};
+  }
+  function notify(){
+    pSubs.slice().forEach(function(f){f(snapP());});
+    sSubs.slice().forEach(function(f){f(snapS());});
+  }
+  function commit(next){
+    try{
+      localStorage.setItem(STORE_KEY,JSON.stringify({version:1,site:next.site,printers:next.printers}));
+      ok=true;
+    }catch(e){
+      if(isQuota(e))throw {code:'quota_exceeded'};
+      ok=false;
+    }
+    mem=next;notify();
+  }
+  function load(announce){
+    var raw=null;
+    try{raw=localStorage.getItem(STORE_KEY);ok=true;}catch(e){ok=false;}
+    if(raw){
+      try{mem=shape(JSON.parse(raw));}
+      catch(e){
+        try{localStorage.setItem(STORE_KEY+'.unreadable',raw);}catch(x){}
+        mem={printers:{},site:{}};
+      }
+    }
+    if(announce)notify();
+  }
+  function ref(path){
+    var p=path.split('/'),col=p[0],id=p[1];
+    return {
+      set:async function(d){var n=clone(mem);if(col==='printers')n.printers[id]=clone(d);else n.site=clone(d);commit(n);},
+      update:async function(d){var n=clone(mem);n.printers[id]=Object.assign({},n.printers[id]||{},clone(d));commit(n);},
+      delete:async function(){var n=clone(mem);delete n.printers[id];commit(n);},
+      onSnapshot:function(cb){
+        if(col==='settings'){sSubs.push(cb);cb(snapS());return function(){sSubs=sSubs.filter(function(f){return f!==cb;});};}
+        pSubs.push(cb);cb(snapP());return function(){pSubs=pSubs.filter(function(f){return f!==cb;});};
+      }
+    };
+  }
+  var db={
+    collection:function(name){
+      return {
+        onSnapshot:function(cb){pSubs.push(cb);cb(snapP());return function(){pSubs=pSubs.filter(function(f){return f!==cb;});};},
+        doc:function(id){return ref('printers/'+(id||newId()));}
+      };
+    },
+    doc:function(path){return ref(path);}
+  };
+  var user={
+    id:async function(){return 'local';},
+    can:async function(){return true;},
+    profiles:async function(){return {local:{name:'You'}};}
+  };
+  var downloads={
+    save:async function(o){
+      var csv=/\.csv$/i.test(o.filename);
+      var blob=new Blob([csv?'﻿'+o.data:o.data],{type:csv?'text/csv;charset=utf-8':'application/json'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url;a.download=o.filename;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(url);},4000);
+    }
+  };
+  return {
+    db:db,user:user,downloads:downloads,load:load,
+    ok:function(){return ok;},
+    state:function(){return clone(mem);},
+    mutate:function(fn){var n=clone(mem);fn(n);commit(n);}
+  };
+})();
+
+/* ---------- backup and import ---------- */
+var pending=null;
+var ENUMS={status:STATUS,connection:CONN,scheme:['http','https'],ipMode:['Static','DHCP reservation','DHCP'],scanTest:['Not tested','Passed','Failed','Not supported']};
+function cleanRecord(raw){
+  if(!raw||typeof raw!=='object')return null;
+  var r={};
+  ALLF.forEach(function(f){
+    var v=raw[f.k];
+    v=(v==null||typeof v==='object')?'':String(v).trim();
+    if(ENUMS[f.k]&&ENUMS[f.k].indexOf(v)<0)v=ENUMS[f.k][0];
+    if(f.t==='date'&&!/^\d{4}-\d\d-\d\d$/.test(v))v='';
+    r[f.k]=v.slice(0,f.t==='area'?2000:300);
+  });
+  if(!r.name)return null;
+  r.createdAt=(typeof raw.createdAt==='string'&&!isNaN(Date.parse(raw.createdAt)))?raw.createdAt:new Date().toISOString();
+  r.log=[];
+  if(Array.isArray(raw.log)){
+    raw.log.slice(-80).forEach(function(e){
+      if(e&&typeof e==='object'&&typeof e.x==='string'&&typeof e.t==='string'&&!isNaN(Date.parse(e.t))){
+        r.log.push({t:e.t,u:(typeof e.u==='string'?e.u.slice(0,60):null),x:e.x.slice(0,400)});
+      }
+    });
+  }
+  return r;
+}
+function cleanSite(o){
+  var s={};
+  if(o&&typeof o==='object'){
+    STD_FIELDS.forEach(function(f){
+      var v=o[f.k];
+      if(v!=null&&typeof v!=='object'){v=String(v).trim().slice(0,200);if(v)s[f.k]=v;}
+    });
+  }
+  return s;
+}
+function dupKey(p){return String(p.name||'').trim().toLowerCase()+'|'+String(p.ip||'').trim();}
+function parseBackup(text){
+  var o;
+  try{o=JSON.parse(text);}catch(e){return {error:'That file is not valid JSON.'};}
+  if(!o||o.app!=='printer-registry'||!Array.isArray(o.printers))return {error:'That file is not a Printer Registry backup.'};
+  var items=[],bad=0;
+  o.printers.forEach(function(raw){
+    var r=cleanRecord(raw);
+    if(!r){bad++;return;}
+    var id=(raw&&okId(raw.id))?raw.id:newId();
+    items.push({id:id,data:r});
+  });
+  return {kind:'json',items:items,bad:bad,site:cleanSite(o.site)};
+}
+function parseCsv(text){
+  text=text.replace(/^﻿/,'');
+  var rows=[],row=[],cell='',q=false,i,c;
+  for(i=0;i<text.length;i++){
+    c=text.charAt(i);
+    if(q){
+      if(c==='"'){if(text.charAt(i+1)==='"'){cell+='"';i++;}else q=false;}
+      else cell+=c;
+    }else if(c==='"'){q=true;}
+    else if(c===','){row.push(cell);cell='';}
+    else if(c==='\n'||c==='\r'){
+      if(c==='\r'&&text.charAt(i+1)==='\n')i++;
+      row.push(cell);cell='';rows.push(row);row=[];
+    }else cell+=c;
+  }
+  if(cell!==''||row.length){row.push(cell);rows.push(row);}
+  return rows.filter(function(r){return r.some(function(x){return String(x).trim()!=='';});});
+}
+function parseCsvImport(text){
+  var rows=parseCsv(text);
+  if(rows.length<2)return {error:'The CSV file needs a header row and at least one printer.'};
+  var head=rows[0].map(function(h){return String(h).trim().toLowerCase();});
+  var col={};
+  ALLF.forEach(function(f){
+    var i=head.indexOf(f.k.toLowerCase());
+    if(i<0)i=head.indexOf(f.l.toLowerCase());
+    if(i>=0)col[f.k]=i;
+  });
+  if(col.name==null)return {error:'No name column found in the header row. Use the Spreadsheet export as a template.'};
+  var have={};
+  printers.forEach(function(p){have[dupKey(p)]=1;});
+  var items=[],noName=0,dups=0;
+  rows.slice(1).forEach(function(row){
+    var raw={};
+    Object.keys(col).forEach(function(k){
+      var v=row[col[k]];v=(v==null)?'':String(v);
+      if(/^'[=+\-@\t\r]/.test(v))v=v.slice(1);
+      raw[k]=v;
+    });
+    var r=cleanRecord(raw);
+    if(!r){noName++;return;}
+    var key=dupKey(r);
+    if(have[key]){dups++;return;}
+    have[key]=1;
+    r.createdAt=new Date().toISOString();
+    r.log=[{t:r.createdAt,u:'local',x:'Imported from CSV'}];
+    items.push({id:newId(),data:r});
+  });
+  return {kind:'csv',items:items,noName:noName,dups:dups};
+}
+function showImport(res){
+  var box=$('#importbox');if(!box)return;
+  if(!res||res.error){pending=null;box.innerHTML='<div class="notice">'+esc(res?res.error:'Nothing to import.')+'</div>';return;}
+  pending=res;
+  var n=res.items.length,noun=n===1?' printer':' printers',html;
+  if(res.kind==='json'){
+    html='<p><strong>'+n+noun+'</strong> found in this backup'+(res.bad?', '+res.bad+' skipped because they were not valid':'')+(Object.keys(res.site).length?'. Site standards are included.':'.')+'</p>'+
+      '<div class="actions"><button type="button" class="btn danger" data-act="applyimport" data-mode="replace">Replace current data</button><button type="button" class="btn primary" data-act="applyimport" data-mode="merge">Merge into current data</button><button type="button" class="btn" data-act="cancelimport">Cancel</button></div>'+
+      '<p class="hint">Replace removes everything now in this browser first. Merge adds new printers and overwrites printers that have the same record id.</p>';
+  }else{
+    html='<p><strong>'+n+noun+'</strong> ready to add'+((res.noName||res.dups)?'. Skipped: '+res.noName+' without a name, '+res.dups+' already in the registry (same name and IP).':'.')+'</p>'+
+      '<div class="actions">'+(n?'<button type="button" class="btn primary" data-act="applyimport" data-mode="add">Add '+n+noun+'</button>':'')+'<button type="button" class="btn" data-act="cancelimport">Cancel</button></div>';
+  }
+  box.innerHTML='<div class="summary">'+html+'</div>';
+}
+function cancelImport(){pending=null;var b=$('#importbox');if(b)b.innerHTML='';}
+function readFile(input,kind){
+  var f=input.files&&input.files[0];
+  input.value='';
+  if(!f)return;
+  if(f.size>5000000){showImport({error:'That file is larger than 5 MB.'});return;}
+  f.text().then(function(t){showImport(kind==='json'?parseBackup(t):parseCsvImport(t));},function(){showImport({error:'Could not read that file.'});});
+}
+async function applyImport(mode){
+  var p=pending;if(!p)return;
+  await run(async function(){
+    store.mutate(function(n){
+      if(p.kind==='json'&&mode==='replace'){n.printers={};n.site={};}
+      p.items.forEach(function(it){n.printers[it.id]=it.data;});
+      if(p.kind==='json'&&Object.keys(p.site).length&&(mode==='replace'||!Object.keys(n.site).length))n.site=p.site;
+    });
+    pending=null;
+    var c=p.items.length;
+    toast((p.kind==='json'?'Restored ':'Added ')+c+(c===1?' printer':' printers'));
+    closeDrawer(true);
+  });
+}
+async function exportJson(){
+  var st=store.state();
+  var out={app:'printer-registry',version:1,exportedAt:new Date().toISOString(),site:st.site,
+    printers:printers.map(function(p){var d=stripId(p);d.id=p.id;return d;})};
+  try{
+    await downloads.save({filename:'printer-registry-backup-'+todayStr()+'.json',data:JSON.stringify(out,null,2)});
+    toast('Backup file ready');
+  }catch(e){toast('Could not create the file. Check the browser download settings.');}
+}
+function clearBoxHtml(){
+  var empty=!printers.length&&!Object.keys(std).length;
+  return '<button type="button" class="btn danger" data-act="askclear"'+(empty?' disabled':'')+'>Delete all data</button>';
+}
+function openData(){
+  pending=null;
+  var n=printers.length,none=!n&&!Object.keys(std).length;
+  var html='<div class="dhead"><div><h2 id="dtitle">Backup and import</h2><p>Printer data is saved in this browser only. Export a copy to keep it safe or to move it to another computer.</p></div><button type="button" class="btn" data-act="close" aria-label="Close">Close</button></div>'+
+    '<div class="dbody">'+
+    '<fieldset><legend>Export</legend><div class="actions"><button type="button" class="btn primary" data-act="exportjson"'+(none?' disabled':'')+'>Backup file (JSON)</button><button type="button" class="btn" data-act="exportcsv"'+(n?'':' disabled')+'>Spreadsheet (CSV)</button></div>'+
+    '<p class="hint">Backup files contain your printer details. Keep them somewhere private.</p></fieldset>'+
+    '<fieldset><legend>Import</legend><div class="actions"><button type="button" class="btn" data-act="pickjson">Restore a backup</button><button type="button" class="btn" data-act="pickcsv">Add printers from CSV</button></div>'+
+    '<p class="hint">CSV files need a header row. The Spreadsheet export is the template, and only the name column is required.</p>'+
+    '<div id="importbox" role="status" aria-live="polite"></div></fieldset>'+
+    '<fieldset><legend>Delete everything</legend><div id="clearbox">'+clearBoxHtml()+'</div></fieldset>'+
+    '</div><div class="dfoot"><button type="button" class="btn" data-act="close">Close</button></div>';
+  openDrawer(html,'data',null);
+}
+function askClear(){
+  var b=$('#clearbox');if(!b)return;
+  b.innerHTML='<div class="confirm"><strong>Delete all printers, change logs and site standards from this browser?</strong><button type="button" class="btn danger" data-act="clearall">Yes, delete everything</button><button type="button" class="btn" data-act="keepdata">Keep it</button></div>';
+  var k=b.querySelector('[data-act="keepdata"]');if(k)k.focus();
+}
+function keepData(){var b=$('#clearbox');if(b)b.innerHTML=clearBoxHtml();}
+async function clearAll(){
+  await run(async function(){
+    store.mutate(function(n){n.printers={};n.site={};});
+    toast('All data deleted');
+    closeDrawer(true);
+  });
+}
+
+/* ---------- boot ---------- */
+store.load(false);
+db=store.db;user=store.user;downloads=store.downloads;uid='local';canWrite=true;
+$('#btnData').addEventListener('click',openData);
+$('#fileJson').addEventListener('change',function(e){readFile(e.target,'json');});
+$('#fileCsv').addEventListener('change',function(e){readFile(e.target,'csv');});
+db.collection('printers').onSnapshot(function(snap){
+  printers=snap.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id});});
+  loaded=true;render();
+});
+db.doc('settings/site').onSnapshot(function(s){
+  std=s.exists?Object.assign({},s.data()||{}):{};
+  render();
+});
+window.addEventListener('storage',function(e){if(e.key===STORE_KEY||e.key===null)store.load(true);});
+})();
+</script>
+</body>
+</html>
+
